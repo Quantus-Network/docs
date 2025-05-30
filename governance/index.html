@@ -172,6 +172,20 @@
                 
             <li class="second-level"><a href="#governance-security">Governance Security</a></li>
                 
+        <li class="first-level "><a href="#treasury-and-origins-in-quantus-governance">Treasury and Origins in Quantus Governance</a></li>
+            <li class="second-level"><a href="#treasury-origins-and-access-control">Treasury Origins and Access Control</a></li>
+                
+                <li class="third-level"><a href="#1-community-treasury-tracks">1. Community Treasury Tracks</a></li>
+                <li class="third-level"><a href="#2-technical-collective-oversight">2. Technical Collective Oversight</a></li>
+            <li class="second-level"><a href="#implementation-details">Implementation Details</a></li>
+                
+                <li class="third-level"><a href="#1-origin-implementation">1. Origin Implementation</a></li>
+                <li class="third-level"><a href="#2-origin-verification">2. Origin Verification</a></li>
+                <li class="third-level"><a href="#3-treasury-operations">3. Treasury Operations</a></li>
+            <li class="second-level"><a href="#security-considerations">Security Considerations</a></li>
+                
+            <li class="second-level"><a href="#treasury-revenue-sources">Treasury Revenue Sources</a></li>
+                
             <li class="second-level"><a href="#technical-collective-voting-mechanism">Technical Collective Voting Mechanism</a></li>
                 
                 <li class="third-level"><a href="#linear-vote-weighting-algorithm">Linear Vote Weighting Algorithm</a></li>
@@ -314,6 +328,63 @@
 <li><strong>Concurrent Referendum Control</strong>: Only one technical referendum can be in the deciding phase at a time, ensuring focused deliberation on critical changes.</li>
 </ol>
 <p>This governance model ensures that the Technical Collective can evolve over time while maintaining the necessary security and access controls appropriate for managing critical protocol components.</p>
+<h1 id="treasury-and-origins-in-quantus-governance">Treasury and Origins in Quantus Governance<a class="headerlink" href="#treasury-and-origins-in-quantus-governance" title="Permanent link">&para;</a></h1>
+<p>The Treasury system in Quantus is designed with multiple layers of control and oversight, integrating both community governance and technical expertise. This multi-layered approach ensures that treasury operations are secure, transparent, and aligned with the network's long-term interests.</p>
+<h2 id="treasury-origins-and-access-control">Treasury Origins and Access Control<a class="headerlink" href="#treasury-origins-and-access-control" title="Permanent link">&para;</a></h2>
+<p>The Treasury system operates through a sophisticated origin system that determines who can propose and approve spending. There are two main paths for treasury operations:</p>
+<h3 id="1-community-treasury-tracks">1. Community Treasury Tracks<a class="headerlink" href="#1-community-treasury-tracks" title="Permanent link">&para;</a></h3>
+<p>The community treasury tracks provide a graduated system for treasury spending, with different tracks requiring varying levels of community approval and support. These tracks are accessible to the general community through the referendum system, allowing for broad participation in treasury decisions.</p>
+<h3 id="2-technical-collective-oversight">2. Technical Collective Oversight<a class="headerlink" href="#2-technical-collective-oversight" title="Permanent link">&para;</a></h3>
+<p>The Technical Collective has a unique role in treasury operations through its ability to act as the Root origin. This is implemented through the <code>RootOrMemberForCollectiveOriginImpl</code> and <code>RootOrMemberForTechReferendaOriginImpl</code> structures, which allow Technical Collective members to participate in treasury decisions with equal voting weights.</p>
+<p>The Technical Collective's involvement in treasury operations provides several key benefits:
+- Technical expertise in evaluating complex treasury proposals
+- Additional security layer for significant treasury operations
+- Ability to act as a check and balance on community treasury decisions
+- Equal voting power among members, ensuring fair representation of technical interests</p>
+<h2 id="implementation-details">Implementation Details<a class="headerlink" href="#implementation-details" title="Permanent link">&para;</a></h2>
+<p>The treasury origin system is implemented through several key components:</p>
+<h3 id="1-origin-implementation">1. Origin Implementation<a class="headerlink" href="#1-origin-implementation" title="Permanent link">&para;</a></h3>
+<p><div class="highlight"><pre><span></span><code><span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">RootOrMemberForCollectiveOriginImpl</span><span class="o">&lt;</span><span class="n">Runtime</span><span class="p">,</span><span class="w"> </span><span class="n">I</span><span class="o">&gt;</span><span class="p">(</span><span class="n">PhantomData</span><span class="o">&lt;</span><span class="p">(</span><span class="n">Runtime</span><span class="p">,</span><span class="w"> </span><span class="n">I</span><span class="p">)</span><span class="o">&gt;</span><span class="p">);</span>
+</code></pre></div>
+This structure allows both Root and Technical Collective members to participate in treasury operations. When a member of the Technical Collective acts, they are treated as having Root-level privileges for treasury operations.</p>
+<h3 id="2-origin-verification">2. Origin Verification<a class="headerlink" href="#2-origin-verification" title="Permanent link">&para;</a></h3>
+<p>The system verifies origins through a combination of:
+- Direct Root access
+- Technical Collective membership verification
+- Community track verification</p>
+<h3 id="3-treasury-operations">3. Treasury Operations<a class="headerlink" href="#3-treasury-operations" title="Permanent link">&para;</a></h3>
+<p>Treasury operations can be initiated through:
+- Community referendum tracks
+- Technical Collective proposals
+- Direct Root operations</p>
+<p>This dual-path system ensures that treasury operations can be executed either through community consensus or through the technical expertise of the Technical Collective, providing flexibility while maintaining security.</p>
+<h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">&para;</a></h2>
+<p>The Treasury system's security is enhanced by:
+- Multiple approval layers
+- Technical Collective oversight
+- Community participation requirements
+- Graduated spending thresholds
+- Origin verification at multiple levels</p>
+<p>This multi-layered approach ensures that treasury operations are secure and aligned with the network's interests, while still maintaining the flexibility needed for efficient operation.</p>
+<p>The integration of Technical Collective oversight through Root origins provides an additional layer of security and expertise to treasury operations, while the community tracks ensure that the broader network can participate in treasury decisions. This balanced approach helps maintain both security and decentralization in treasury management.</p>
+<h2 id="treasury-revenue-sources">Treasury Revenue Sources<a class="headerlink" href="#treasury-revenue-sources" title="Permanent link">&para;</a></h2>
+<p>The Quantus Treasury is funded through two primary revenue streams:</p>
+<ol>
+<li><strong>Transaction Fees</strong></li>
+<li>10% of all transaction fees are automatically allocated to the Treasury</li>
+<li>This provides a steady stream of income proportional to network usage</li>
+<li>
+<p>Fees are collected automatically during transaction processing</p>
+</li>
+<li>
+<p><strong>Mining Rewards</strong></p>
+</li>
+<li>Miners can choose to allocate a portion of their mining rewards to the Treasury</li>
+<li>This is implemented through the <code>mining-rewards</code> pallet</li>
+<li>Miners can configure their reward distribution through the mining configuration</li>
+<li>Provides an additional voluntary funding mechanism for the Treasury</li>
+</ol>
+<p>The detailed implementation and configuration of mining rewards allocation to the Treasury can be found in the <code>mining-rewards</code> pallet documentation.</p>
 <h2 id="technical-collective-voting-mechanism">Technical Collective Voting Mechanism<a class="headerlink" href="#technical-collective-voting-mechanism" title="Permanent link">&para;</a></h2>
 <p>The Technical Collective in Quantus employs the <code>pallet_ranked_collective</code> with a <code>Linear</code> vote weighting algorithm, though with a significant customization that results in a flat organizational structure.</p>
 <h3 id="linear-vote-weighting-algorithm">Linear Vote Weighting Algorithm<a class="headerlink" href="#linear-vote-weighting-algorithm" title="Permanent link">&para;</a></h3>
