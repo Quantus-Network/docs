@@ -11,7 +11,7 @@
     <link rel="shortcut icon" href="../img/favicon.ico">
 
     
-    <title>Governance - Quantus Network Documentation</title>
+    <title>Introduction - Quantus Network Documentation</title>
     
 
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/all.css">
@@ -75,61 +75,49 @@
                 
                 
                 
-                    <li class="dropdown">
+                    <li class="dropdown active">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">Governance <b class="caret"></b></a>
                         <ul class="dropdown-menu">
                         
                             
-<li >
-    <a href="../Governance.md">Introduction</a>
+<li class="active">
+    <a href="./">Introduction</a>
 </li>
 
                         
                             
 <li >
-    <a href="../Path-0/">Path 0</a>
+    <a href="path_0/">Path 0</a>
 </li>
 
                         
                             
 <li >
-    <a href="../Path-1/">Path 1</a>
+    <a href="path_1/">Path 1</a>
 </li>
 
                         
                             
 <li >
-    <a href="../Path-2/">Path 2</a>
+    <a href="path_2/">Path 2</a>
 </li>
 
                         
                             
 <li >
-    <a href="../Path-3/">Path 3</a>
+    <a href="path_3/">Path 3</a>
 </li>
 
                         
                             
 <li >
-    <a href="../Path-4/">Path 4</a>
+    <a href="path_4/">Path 4</a>
 </li>
 
                         
                             
 <li >
-    <a href="../Path-5/">Path 5</a>
-</li>
-
-                        
-                            
-<li >
-    <a href="../TechPath-0/">TechPath 0</a>
-</li>
-
-                        
-                            
-<li >
-    <a href="../TechPath-1.md">TechPath 1</a>
+    <a href="tech_path_0/">TechPath 0</a>
 </li>
 
                         
@@ -145,6 +133,16 @@
                             <i class="fas fa-search"></i> Search
                         </a>
                     </li>
+                    <li >
+                        <a rel="prev" href="..">
+                            <i class="fas fa-arrow-left"></i> Previous
+                        </a>
+                    </li>
+                    <li >
+                        <a rel="next" href="path_0/">
+                            Next <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </li>
             </ul>
         </div>
     </div>
@@ -156,12 +154,186 @@
         <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
     <ul class="nav bs-sidenav">
         <li class="first-level active"><a href="#governance">Governance</a></li>
+            <li class="second-level"><a href="#introduction">Introduction</a></li>
+                
+        <li class="first-level "><a href="#quantus-dao-governance-decision-paths">Quantus DAO Governance Decision Paths</a></li>
+            <li class="second-level"><a href="#technical-collective-paths">Technical Collective Paths:</a></li>
+                
+            <li class="second-level"><a href="#community-governance">Community Governance:</a></li>
+                
+        <li class="first-level "><a href="#technical-collective-management-in-quantus-governance">Technical Collective Management in Quantus Governance</a></li>
+            <li class="second-level"><a href="#membership-management-operations">Membership Management Operations</a></li>
+                
+            <li class="second-level"><a href="#governance-security">Governance Security</a></li>
+                
+            <li class="second-level"><a href="#technical-collective-voting-mechanism">Technical Collective Voting Mechanism</a></li>
+                
+                <li class="third-level"><a href="#linear-vote-weighting-algorithm">Linear Vote Weighting Algorithm</a></li>
+                <li class="third-level"><a href="#flat-structure-implementation">Flat Structure Implementation</a></li>
+            <li class="second-level"><a href="#conviction-voting-in-quantus-community-governance">Conviction Voting in Quantus Community Governance</a></li>
+                
     </ul>
 </div></div>
         <div class="col-md-9" role="main">
 
 <h1 id="governance">Governance<a class="headerlink" href="#governance" title="Permanent link">&para;</a></h1>
-<p>Information about the governance model of Quantus Network. </p></div>
+<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h2>
+<p><img alt="Governance Organization" src="../images/governance.png" /></p>
+<p>Quantus incorporates an on-chain governance system designed to facilitate decentralized decision-making while maintaining technical stability and security. The governance architecture is built on Substrate's pallets, utilizing two separate referendum systems: a Community-driven track system and a specialized Technical Collective.</p>
+<p>At its core, Quantus's governance is structured around two distinct mechanisms:</p>
+<ol>
+<li><strong>Community Governance</strong>: A five-track referendum system that allows general community participation in decision-making processes with varying levels of required support and approval, utilizing conviction voting.</li>
+<li><strong>Technical Collective</strong>: A specialized committee of members who can vote on technical proposals with equal voting weights, focused on managing critical protocol changes through a ranked collective mechanism.</li>
+</ol>
+<p>The technical architecture of the Quantus governance system is composed of several integrated components:</p>
+<ol>
+<li><strong>Technical Collective</strong>: A flat membership structure where members have equal voting power, with access restricted to root and existing members. This collective uses the ranked collective pallet for simple yes/no voting with equal member weights.</li>
+<li><strong>Community Track System</strong>: A two-track approach to proposal categorization, separating authenticated proposals (signed track) from general community signaling, implemented through the conviction voting pallet.</li>
+<li><strong>Dual Referendum Systems</strong>: Separate referendum instances for the Technical Collective and Community Governance, each with its own tracks and configuration parameters.</li>
+<li><strong>Preimage and Scheduler Integration</strong>: Infrastructure to store, manage, and execute proposals once approved through either governance mechanism.</li>
+</ol>
+<p>This dual governance system enables Quantus to implement changes with appropriate levels of security and community involvement based on the significance of each change. The Technical Collective provides specialized oversight for critical protocol functions through a simplified equal-weight voting system, while the Community tracks allow broader participation with conviction-weighted voting in the network's evolution.</p>
+<p>The following documentation details the technical implementation of this governance system, exploring its components, security controls, and interaction patterns to provide a comprehensive understanding of how decentralized decision-making operates within the Quantus ecosystem.</p>
+<h1 id="quantus-dao-governance-decision-paths">Quantus DAO Governance Decision Paths<a class="headerlink" href="#quantus-dao-governance-decision-paths" title="Permanent link">&para;</a></h1>
+<h3 id="technical-collective-paths"><strong>Technical Collective Paths:</strong><a class="headerlink" href="#technical-collective-paths" title="Permanent link">&para;</a></h3>
+<p><strong>Critical Protocol Changes</strong> </p>
+<ul>
+<li>Reserved for fundamental system modifications</li>
+<li>Highest security thresholds</li>
+<li>Controlled by Technical Collective members</li>
+</ul>
+<h3 id="community-governance"><strong>Community Governance:</strong><a class="headerlink" href="#community-governance" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Path 0: Protocol Improvements</strong></p>
+<ul>
+<li>For authenticated proposals requiring elevated privileges</li>
+<li>Moderate security thresholds</li>
+<li>Open to all token holders</li>
+</ul>
+<p><a href="/governance/path_0">Detailed configuration</a></p>
+</li>
+<li>
+<p><strong>Path 1: Community Signaling</strong></p>
+<ul>
+<li>For non-binding community sentiment gathering</li>
+<li>Minimal security thresholds</li>
+<li>Designed for maximum participation</li>
+</ul>
+<p><a href="/governance/path_1">Detailed configuration</a></p>
+</li>
+<li>
+<p><strong>Path 2: Treasury Small Spender</strong></p>
+<ul>
+<li>For small treasury disbursements</li>
+<li>Lower approval and support thresholds</li>
+<li>Ideal for community grants and small project funding</li>
+</ul>
+<p><a href="/governance/path_2">Detailed configuration</a></p>
+</li>
+<li>
+<p><strong>Path 3: Treasury Medium Spender</strong></p>
+<ul>
+<li>For medium-sized treasury disbursements</li>
+<li>Moderate approval and support thresholds</li>
+<li>Suitable for larger community projects and initiatives</li>
+</ul>
+<p><a href="/governance/path_3">Detailed configuration</a></p>
+</li>
+<li>
+<p><strong>Path 4: Treasury Big Spender</strong></p>
+<ul>
+<li>For large treasury disbursements</li>
+<li>Higher approval and support thresholds</li>
+<li>Reserved for significant community initiatives and partnerships</li>
+</ul>
+<p><a href="/governance/path_4">Detailed configuration</a></p>
+</li>
+<li>
+<p><strong>Path 5: Treasury Treasurer</strong></p>
+<ul>
+<li>For significant treasury operations</li>
+<li>Highest security thresholds</li>
+<li>Restricted to designated treasury treasurer accounts</li>
+</ul>
+<p><a href="/governance/path_5">Detailed configuration</a></p>
+</li>
+</ol>
+<p>Each referendum type defines a decision path along with its parameters:</p>
+<ul>
+<li><strong>name</strong>: Name of the track (e.g., "root", "signed", "signaling")</li>
+<li><strong>max_deciding</strong>: Maximum number of concurrent referenda in deciding phase. Additionally, we have a global parameter (100) that defines the maximum number of proposals that can be waiting in the queue.</li>
+<li><strong>decision_deposit</strong>: Deposit required to move to the deciding phase</li>
+<li><strong>prepare_period</strong>: Preparation period before voting begins</li>
+<li><strong>decision_period</strong>: Voting/deciding period duration</li>
+<li><strong>confirm_period</strong>: The duration during which an approved referendum must continuously maintain the required approval and support thresholds before being finalized. This acts as a security mechanism against last-minute voting manipulations by requiring sustained consensus over time. During this period, voters can still change their votes, and if support drops below the required thresholds, the referendum returns to the deciding phase. Only after successfully passing through the entire confirmation period can a referendum be considered fully approved and scheduled for execution.</li>
+<li><strong>min_enactment_period</strong>: The mandatory waiting period between a referendum's final approval and its actual execution on-chain. This delay serves multiple critical purposes: it provides time for the community to prepare for upcoming changes, allows developers to verify their implementations, allows stakeholders to adjust their positions if necessary, and provides a safety buffer against any unforeseen issues. During this period, the approved code or change cannot be altered, but the community gains valuable time to ready itself for the impending protocol modification before it takes effect.</li>
+<li><strong>min_approval</strong>: A dynamic threshold system that defines the required percentage of "aye" votes relative to total votes (ayes + nays) for a referendum to pass. Rather than using a fixed percentage, it employs a sophisticated curve mechanism that typically starts high and gradually decreases over time. This approach prevents hasty approvals of controversial proposals while allowing well-supported ones to pass quickly. The curve can be configured with different starting points (ceiling) and ending points (floor), and the rate of decline can be adjusted per governance track based on the sensitivity of decisions in that track. For critical protocol changes, the curve might range from 100% to 75%, while less critical decisions might use more lenient ranges like 60% to 50%.</li>
+<li><strong>min_support</strong>: A sophisticated metric that measures overall participation in a referendum relative to the total possible voting power in the system. Unlike approval (which measures the ratio of "aye" to total votes cast), support evaluates the absolute level of engagement from all possible voters. This parameter also employs a curve mechanism that typically begins with a higher threshold and gradually decreases over time, encouraging broader participation for important decisions. The support requirement helps prevent situations where proposals could pass with high approval percentages but very low voter turnout. For example, a referendum track might require 25% of all possible votes at the start of voting, declining to 5% by the end of the period. This ensures that major changes cannot be enacted with minimal participation while still allowing decisions to proceed even if perfect turnout is not achieved.</li>
+</ul>
+<h1 id="technical-collective-management-in-quantus-governance">Technical Collective Management in Quantus Governance<a class="headerlink" href="#technical-collective-management-in-quantus-governance" title="Permanent link">&para;</a></h1>
+<p>The Quantus governance system provides comprehensive mechanisms for Technical Collective management through its dedicated governance framework. The Technical Collective starts empty and must be initialized by the root account, with all subsequent membership changes occurring through on-chain governance processes.</p>
+<h3 id="membership-management-operations">Membership Management Operations<a class="headerlink" href="#membership-management-operations" title="Permanent link">&para;</a></h3>
+<p>The system supports several key operations for Technical Collective management:</p>
+<ol>
+<li><strong>Adding Members</strong>: New technical experts can be added through two methods:<ul>
+<li>By the root account directly using <code>TechCollective::add_member</code></li>
+<li>By existing members proposing <code>TechCollective::add_member</code> through the <code>RootOrMemberForCollectiveOrigin</code> origin</li>
+</ul>
+</li>
+<li><strong>Removing Members</strong>: Members can be removed via:<ul>
+<li>Root account using <code>TechCollective::remove_member</code></li>
+<li>Existing members proposing <code>TechCollective::remove_member</code></li>
+</ul>
+</li>
+<li><strong>Referendum-Based Changes</strong>: Technical changes, including membership modifications, can be proposed through the dedicated <code>TechReferenda</code> system, which is separate from the community referendum system.</li>
+</ol>
+<h3 id="governance-security">Governance Security<a class="headerlink" href="#governance-security" title="Permanent link">&para;</a></h3>
+<p>Operations are protected by robust security controls:</p>
+<ol>
+<li><strong>Single Track Design</strong>: The Technical Collective's referendum system uses a single track (Track 0) with strict parameters:<ul>
+<li>75% minimum approval threshold</li>
+<li>5-day decision period</li>
+<li>2-day confirmation period</li>
+</ul>
+</li>
+<li><strong>Access Control</strong>: Only root or existing Technical Collective members can:<ul>
+<li>Submit referenda through the <code>RootOrMemberForTechReferendaOrigin</code> check</li>
+<li>Vote on technical proposals</li>
+<li>Add or remove members</li>
+</ul>
+</li>
+<li><strong>Flat Structure</strong>: Unlike hierarchical systems, the Technical Collective uses a flat structure where all members have equal voting weight, as implemented through the <code>pallet_ranked_collective</code> with <code>Linear</code> vote weighting.</li>
+<li><strong>Membership Limit</strong>: The Technical Collective has a maximum membership limit of 13 members, as defined by the <code>MaxMemberCount</code> parameter.</li>
+<li><strong>Concurrent Referendum Control</strong>: Only one technical referendum can be in the deciding phase at a time, ensuring focused deliberation on critical changes.</li>
+</ol>
+<p>This governance model ensures that the Technical Collective can evolve over time while maintaining the necessary security and access controls appropriate for managing critical protocol components.</p>
+<h2 id="technical-collective-voting-mechanism">Technical Collective Voting Mechanism<a class="headerlink" href="#technical-collective-voting-mechanism" title="Permanent link">&para;</a></h2>
+<p>The Technical Collective in Quantus employs the <code>pallet_ranked_collective</code> with a <code>Linear</code> vote weighting algorithm, though with a significant customization that results in a flat organizational structure.</p>
+<h3 id="linear-vote-weighting-algorithm">Linear Vote Weighting Algorithm<a class="headerlink" href="#linear-vote-weighting-algorithm" title="Permanent link">&para;</a></h3>
+<p>The <code>Linear</code> vote weighting algorithm in a standard ranked collective would typically assign voting power based on a member's rank or level within the organization. Higher-ranked members would receive proportionally greater voting weight, creating a hierarchical voting structure.</p>
+<h3 id="flat-structure-implementation">Flat Structure Implementation<a class="headerlink" href="#flat-structure-implementation" title="Permanent link">&para;</a></h3>
+<p>In Quantus's Technical Collective implementation:</p>
+<ul>
+<li><strong>No Rank Differentiation</strong>: Although the underlying pallet supports hierarchical ranks, Quantus configures the collective with <code>MinRankOfClassDelta</code> set to 0, effectively flattening the structure.</li>
+<li><strong>Equal Voting Power</strong>: All members possess identical voting power regardless of when they joined or who added them. Each vote counts exactly the same, whether cast by founding members or more recently added experts.</li>
+<li><strong>One-Member-One-Vote</strong>: The system functions purely as a one-member-one-vote democracy within the collective, eliminating potential power imbalances from a traditional ranked structure.</li>
+<li><strong>Promotion/Demotion Disabled</strong>: The configuration deliberately disables the promotion and demotion functions by setting <code>PromoteOrigin</code> and <code>DemoteOrigin</code> to <code>NeverEnsureOrigin</code>, ensuring the collective remains flat.</li>
+</ul>
+<p>This flat structure was deliberately chosen for the Technical Collective to:</p>
+<ol>
+<li>Ensure equal representation among technical experts</li>
+<li>Prevent power concentration in a subset of members</li>
+<li>Foster collaborative decision-making based on expertise rather than seniority</li>
+<li>Simplify the governance process for technical matters</li>
+</ol>
+<p>When Technical Collective members vote on referenda, each member's vote carries exactly the same weight, creating a pure democratic process within this specialized group while still maintaining the exclusive membership required for protocol-critical decisions.</p>
+<h2 id="conviction-voting-in-quantus-community-governance">Conviction Voting in Quantus Community Governance<a class="headerlink" href="#conviction-voting-in-quantus-community-governance" title="Permanent link">&para;</a></h2>
+<p>For community governance, conviction voting functions as a vote-weighting mechanism that operates alongside approval and support threshold configurations. When casting a vote, token holders can choose a conviction level that multiplies their voting power (from 1x to 6x) in exchange for locking their tokens for a proportionally longer period.</p>
+<ul>
+<li><strong>Path 0 (Signed Track)</strong>: For authenticated proposals that require privileges, conviction voting helps measure both approval (55-70% approval curve) and support (5-25% support curve) with weighted voting power.</li>
+<li><strong>Path 1 (Signaling Track)</strong>: For non-binding community opinions, conviction voting influences both approval (50-60% approval curve) and support (1-10% support curve) thresholds.</li>
+</ul></div>
         
         
     </div>
