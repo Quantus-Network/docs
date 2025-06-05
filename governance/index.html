@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+    <meta name="description" content="Documentation for Quantus Network">
     
     
     <link rel="shortcut icon" href="../img/favicon.ico">
@@ -126,6 +126,12 @@
 </li>
 
         
+            
+<li >
+    <a href="tech_path_0/">Tech Path 0</a>
+</li>
+
+        
     </ul>
   </li>
 
@@ -176,6 +182,8 @@
                 
             <li class="second-level"><a href="#community-governance">Community Governance:</a></li>
                 
+            <li class="second-level"><a href="#referendum-parameters">Referendum Parameters</a></li>
+                
         <li class="first-level "><a href="#technical-collective-management-in-quantus-governance">Technical Collective Management in Quantus Governance</a></li>
             <li class="second-level"><a href="#membership-management-operations">Membership Management Operations</a></li>
                 
@@ -205,8 +213,8 @@
 </div></div>
         <div class="col-md-9" role="main">
 
-<h1 id="governance">Governance<a class="headerlink" href="#governance" title="Permanent link">&para;</a></h1>
-<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h2>
+<h1 id="governance">Governance</h1>
+<h2 id="introduction">Introduction</h2>
 <p><img alt="Governance Organization" src="../images/governance.png" /></p>
 <p>Quantus incorporates an on-chain governance system designed to facilitate decentralized decision-making while maintaining technical stability and security. The governance architecture is built on Substrate's pallets, utilizing two separate referendum systems: a Community-driven track system and a specialized Technical Collective.</p>
 <p>At its core, Quantus's governance is structured around two distinct mechanisms:</p>
@@ -223,15 +231,15 @@
 </ol>
 <p>This dual governance system enables Quantus to implement changes with appropriate levels of security and community involvement based on the significance of each change. The Technical Collective provides specialized oversight for critical protocol functions through a simplified equal-weight voting system, while the Community tracks allow broader participation with conviction-weighted voting in the network's evolution.</p>
 <p>The following documentation details the technical implementation of this governance system, exploring its components, security controls, and interaction patterns to provide a comprehensive understanding of how decentralized decision-making operates within the Quantus ecosystem.</p>
-<h1 id="quantus-dao-governance-decision-paths">Quantus DAO Governance Decision Paths<a class="headerlink" href="#quantus-dao-governance-decision-paths" title="Permanent link">&para;</a></h1>
-<h3 id="technical-collective-paths"><strong>Technical Collective Paths:</strong><a class="headerlink" href="#technical-collective-paths" title="Permanent link">&para;</a></h3>
+<h1 id="quantus-dao-governance-decision-paths">Quantus DAO Governance Decision Paths</h1>
+<h3 id="technical-collective-paths"><strong>Technical Collective Paths:</strong></h3>
 <p><strong>Critical Protocol Changes</strong> </p>
 <ul>
 <li>Reserved for fundamental system modifications</li>
 <li>Highest security thresholds</li>
 <li>Controlled by Technical Collective members</li>
 </ul>
-<h3 id="community-governance"><strong>Community Governance:</strong><a class="headerlink" href="#community-governance" title="Permanent link">&para;</a></h3>
+<h3 id="community-governance"><strong>Community Governance:</strong></h3>
 <ol>
 <li>
 <p><strong>Path 0: Protocol Improvements</strong></p>
@@ -288,6 +296,7 @@
 <p><a href="path_5/">Detailed configuration</a></p>
 </li>
 </ol>
+<h3 id="referendum-parameters">Referendum Parameters</h3>
 <p>Each referendum type defines a decision path along with its parameters:</p>
 <ul>
 <li><strong>name</strong>: Name of the track (e.g., "root", "signed", "signaling")</li>
@@ -300,9 +309,9 @@
 <li><strong>min_approval</strong>: A dynamic threshold system that defines the required percentage of "aye" votes relative to total votes (ayes + nays) for a referendum to pass. Rather than using a fixed percentage, it employs a sophisticated curve mechanism that typically starts high and gradually decreases over time. This approach prevents hasty approvals of controversial proposals while allowing well-supported ones to pass quickly. The curve can be configured with different starting points (ceiling) and ending points (floor), and the rate of decline can be adjusted per governance track based on the sensitivity of decisions in that track. For critical protocol changes, the curve might range from 100% to 75%, while less critical decisions might use more lenient ranges like 60% to 50%.</li>
 <li><strong>min_support</strong>: A sophisticated metric that measures overall participation in a referendum relative to the total possible voting power in the system. Unlike approval (which measures the ratio of "aye" to total votes cast), support evaluates the absolute level of engagement from all possible voters. This parameter also employs a curve mechanism that typically begins with a higher threshold and gradually decreases over time, encouraging broader participation for important decisions. The support requirement helps prevent situations where proposals could pass with high approval percentages but very low voter turnout. For example, a referendum track might require 25% of all possible votes at the start of voting, declining to 5% by the end of the period. This ensures that major changes cannot be enacted with minimal participation while still allowing decisions to proceed even if perfect turnout is not achieved.</li>
 </ul>
-<h1 id="technical-collective-management-in-quantus-governance">Technical Collective Management in Quantus Governance<a class="headerlink" href="#technical-collective-management-in-quantus-governance" title="Permanent link">&para;</a></h1>
+<h1 id="technical-collective-management-in-quantus-governance">Technical Collective Management in Quantus Governance</h1>
 <p>The Quantus governance system provides comprehensive mechanisms for Technical Collective management through its dedicated governance framework. The Technical Collective starts empty and must be initialized by the root account, with all subsequent membership changes occurring through on-chain governance processes.</p>
-<h3 id="membership-management-operations">Membership Management Operations<a class="headerlink" href="#membership-management-operations" title="Permanent link">&para;</a></h3>
+<h3 id="membership-management-operations">Membership Management Operations</h3>
 <p>The system supports several key operations for Technical Collective management:</p>
 <ol>
 <li><strong>Adding Members</strong>: New technical experts can be added through two methods:<ul>
@@ -317,7 +326,7 @@
 </li>
 <li><strong>Referendum-Based Changes</strong>: Technical changes, including membership modifications, can be proposed through the dedicated <code>TechReferenda</code> system, which is separate from the community referendum system.</li>
 </ol>
-<h3 id="governance-security">Governance Security<a class="headerlink" href="#governance-security" title="Permanent link">&para;</a></h3>
+<h3 id="governance-security">Governance Security</h3>
 <p>Operations are protected by robust security controls:</p>
 <ol>
 <li><strong>Single Track Design</strong>: The Technical Collective's referendum system uses a single track (Track 0) with strict parameters:<ul>
@@ -337,37 +346,37 @@
 <li><strong>Concurrent Referendum Control</strong>: Only one technical referendum can be in the deciding phase at a time, ensuring focused deliberation on critical changes.</li>
 </ol>
 <p>This governance model ensures that the Technical Collective can evolve over time while maintaining the necessary security and access controls appropriate for managing critical protocol components.</p>
-<h1 id="treasury-and-origins-in-quantus-governance">Treasury and Origins in Quantus Governance<a class="headerlink" href="#treasury-and-origins-in-quantus-governance" title="Permanent link">&para;</a></h1>
+<h1 id="treasury-and-origins-in-quantus-governance">Treasury and Origins in Quantus Governance</h1>
 <p>The Treasury system in Quantus is designed with multiple layers of control and oversight, integrating both community governance and technical expertise. This multi-layered approach ensures that treasury operations are secure, transparent, and aligned with the network's long-term interests.</p>
-<h2 id="treasury-origins-and-access-control">Treasury Origins and Access Control<a class="headerlink" href="#treasury-origins-and-access-control" title="Permanent link">&para;</a></h2>
+<h2 id="treasury-origins-and-access-control">Treasury Origins and Access Control</h2>
 <p>The Treasury system operates through a sophisticated origin system that determines who can propose and approve spending. There are two main paths for treasury operations:</p>
-<h3 id="1-community-treasury-tracks">1. Community Treasury Tracks<a class="headerlink" href="#1-community-treasury-tracks" title="Permanent link">&para;</a></h3>
+<h3 id="1-community-treasury-tracks">1. Community Treasury Tracks</h3>
 <p>The community treasury tracks provide a graduated system for treasury spending, with different tracks requiring varying levels of community approval and support. These tracks are accessible to the general community through the referendum system, allowing for broad participation in treasury decisions.</p>
-<h3 id="2-technical-collective-oversight">2. Technical Collective Oversight<a class="headerlink" href="#2-technical-collective-oversight" title="Permanent link">&para;</a></h3>
+<h3 id="2-technical-collective-oversight">2. Technical Collective Oversight</h3>
 <p>The Technical Collective has a unique role in treasury operations through its ability to act as the Root origin. This is implemented through the <code>RootOrMemberForCollectiveOriginImpl</code> and <code>RootOrMemberForTechReferendaOriginImpl</code> structures, which allow Technical Collective members to participate in treasury decisions with equal voting weights.</p>
 <p>The Technical Collective's involvement in treasury operations provides several key benefits:
 - Technical expertise in evaluating complex treasury proposals
 - Additional security layer for significant treasury operations
 - Ability to act as a check and balance on community treasury decisions
 - Equal voting power among members, ensuring fair representation of technical interests</p>
-<h2 id="implementation-details">Implementation Details<a class="headerlink" href="#implementation-details" title="Permanent link">&para;</a></h2>
+<h2 id="implementation-details">Implementation Details</h2>
 <p>The treasury origin system is implemented through several key components:</p>
-<h3 id="1-origin-implementation">1. Origin Implementation<a class="headerlink" href="#1-origin-implementation" title="Permanent link">&para;</a></h3>
-<p><div class="highlight"><pre><span></span><code><span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">RootOrMemberForCollectiveOriginImpl</span><span class="o">&lt;</span><span class="n">Runtime</span><span class="p">,</span><span class="w"> </span><span class="n">I</span><span class="o">&gt;</span><span class="p">(</span><span class="n">PhantomData</span><span class="o">&lt;</span><span class="p">(</span><span class="n">Runtime</span><span class="p">,</span><span class="w"> </span><span class="n">I</span><span class="p">)</span><span class="o">&gt;</span><span class="p">);</span>
-</code></pre></div>
-This structure allows both Root and Technical Collective members to participate in treasury operations. When a member of the Technical Collective acts, they are treated as having Root-level privileges for treasury operations.</p>
-<h3 id="2-origin-verification">2. Origin Verification<a class="headerlink" href="#2-origin-verification" title="Permanent link">&para;</a></h3>
+<h3 id="1-origin-implementation">1. Origin Implementation</h3>
+<pre><code class="language-rust">pub struct RootOrMemberForCollectiveOriginImpl&lt;Runtime, I&gt;(PhantomData&lt;(Runtime, I)&gt;);
+</code></pre>
+<p>This structure allows both Root and Technical Collective members to participate in treasury operations. When a member of the Technical Collective acts, they are treated as having Root-level privileges for treasury operations.</p>
+<h3 id="2-origin-verification">2. Origin Verification</h3>
 <p>The system verifies origins through a combination of:
 - Direct Root access
 - Technical Collective membership verification
 - Community track verification</p>
-<h3 id="3-treasury-operations">3. Treasury Operations<a class="headerlink" href="#3-treasury-operations" title="Permanent link">&para;</a></h3>
+<h3 id="3-treasury-operations">3. Treasury Operations</h3>
 <p>Treasury operations can be initiated through:
 - Community referendum tracks
 - Technical Collective proposals
 - Direct Root operations</p>
 <p>This dual-path system ensures that treasury operations can be executed either through community consensus or through the technical expertise of the Technical Collective, providing flexibility while maintaining security.</p>
-<h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">&para;</a></h2>
+<h2 id="security-considerations">Security Considerations</h2>
 <p>The Treasury system's security is enhanced by:
 - Multiple approval layers
 - Technical Collective oversight
@@ -376,7 +385,7 @@ This structure allows both Root and Technical Collective members to participate 
 - Origin verification at multiple levels</p>
 <p>This multi-layered approach ensures that treasury operations are secure and aligned with the network's interests, while still maintaining the flexibility needed for efficient operation.</p>
 <p>The integration of Technical Collective oversight through Root origins provides an additional layer of security and expertise to treasury operations, while the community tracks ensure that the broader network can participate in treasury decisions. This balanced approach helps maintain both security and decentralization in treasury management.</p>
-<h2 id="treasury-revenue-sources">Treasury Revenue Sources<a class="headerlink" href="#treasury-revenue-sources" title="Permanent link">&para;</a></h2>
+<h2 id="treasury-revenue-sources">Treasury Revenue Sources</h2>
 <p>The Quantus Treasury is funded through two primary revenue streams:</p>
 <ol>
 <li><strong>Transaction Fees</strong></li>
@@ -395,11 +404,11 @@ This structure allows both Root and Technical Collective members to participate 
 </ol>
 <p>The detailed implementation and configuration of mining rewards allocation to the Treasury can be found in the <code>mining-rewards</code> pallet documentation.</p>
 <p>For detailed information about how the Treasury manages fund distribution through vesting schedules and milestone-based grants, please refer to the <a href="vesting_scenarios/">Vesting Scenarios in Governance</a> documentation.</p>
-<h2 id="technical-collective-voting-mechanism">Technical Collective Voting Mechanism<a class="headerlink" href="#technical-collective-voting-mechanism" title="Permanent link">&para;</a></h2>
+<h2 id="technical-collective-voting-mechanism">Technical Collective Voting Mechanism</h2>
 <p>The Technical Collective in Quantus employs the <code>pallet_ranked_collective</code> with a <code>Linear</code> vote weighting algorithm, though with a significant customization that results in a flat organizational structure.</p>
-<h3 id="linear-vote-weighting-algorithm">Linear Vote Weighting Algorithm<a class="headerlink" href="#linear-vote-weighting-algorithm" title="Permanent link">&para;</a></h3>
+<h3 id="linear-vote-weighting-algorithm">Linear Vote Weighting Algorithm</h3>
 <p>The <code>Linear</code> vote weighting algorithm in a standard ranked collective would typically assign voting power based on a member's rank or level within the organization. Higher-ranked members would receive proportionally greater voting weight, creating a hierarchical voting structure.</p>
-<h3 id="flat-structure-implementation">Flat Structure Implementation<a class="headerlink" href="#flat-structure-implementation" title="Permanent link">&para;</a></h3>
+<h3 id="flat-structure-implementation">Flat Structure Implementation</h3>
 <p>In Quantus's Technical Collective implementation:</p>
 <ul>
 <li><strong>No Rank Differentiation</strong>: Although the underlying pallet supports hierarchical ranks, Quantus configures the collective with <code>MinRankOfClassDelta</code> set to 0, effectively flattening the structure.</li>
@@ -415,7 +424,7 @@ This structure allows both Root and Technical Collective members to participate 
 <li>Simplify the governance process for technical matters</li>
 </ol>
 <p>When Technical Collective members vote on referenda, each member's vote carries exactly the same weight, creating a pure democratic process within this specialized group while still maintaining the exclusive membership required for protocol-critical decisions.</p>
-<h2 id="conviction-voting-in-quantus-community-governance">Conviction Voting in Quantus Community Governance<a class="headerlink" href="#conviction-voting-in-quantus-community-governance" title="Permanent link">&para;</a></h2>
+<h2 id="conviction-voting-in-quantus-community-governance">Conviction Voting in Quantus Community Governance</h2>
 <p>For community governance, conviction voting functions as a vote-weighting mechanism that operates alongside approval and support threshold configurations. When casting a vote, token holders can choose a conviction level that multiplies their voting power (from 1x to 6x) in exchange for locking their tokens for a proportionally longer period.</p>
 <ul>
 <li><strong>Path 0 (Signed Track)</strong>: For authenticated proposals that require privileges, conviction voting helps measure both approval (55-70% approval curve) and support (5-25% support curve) with weighted voting power.</li>

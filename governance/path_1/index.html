@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+    <meta name="description" content="Documentation for Quantus Network">
     
     
     <link rel="shortcut icon" href="../../img/favicon.ico">
@@ -126,6 +126,12 @@
 </li>
 
         
+            
+<li >
+    <a href="../tech_path_0/">Tech Path 0</a>
+</li>
+
+        
     </ul>
   </li>
 
@@ -169,42 +175,50 @@
         <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
     <ul class="nav bs-sidenav">
         <li class="first-level active"><a href="#path-1-community-signaling">Path 1: Community Signaling</a></li>
+            <li class="second-level"><a href="#parameters">Parameters</a></li>
+                
+            <li class="second-level"><a href="#approval-and-support-thresholds">Approval and Support Thresholds</a></li>
+                
+                <li class="third-level"><a href="#minimum-approval">Minimum Approval</a></li>
+                <li class="third-level"><a href="#minimum-support">Minimum Support</a></li>
+            <li class="second-level"><a href="#permissions">Permissions</a></li>
+                
     </ul>
 </div></div>
         <div class="col-md-9" role="main">
 
-<h1 id="path-1-community-signaling">Path 1: Community Signaling<a class="headerlink" href="#path-1-community-signaling" title="Permanent link">&para;</a></h1>
-<p><strong>Parameters:</strong></p>
+<h1 id="path-1-community-signaling">Path 1: Community Signaling</h1>
+<h2 id="parameters">Parameters</h2>
 <ul>
-<li><strong>Name:</strong> signaling</li>
-<li><strong>Maximum Deciding:</strong> 20 referenda concurrently</li>
-<li><strong>Decision Deposit:</strong> 100 QUAN</li>
-<li><strong>Prepare Period:</strong> 6 hours</li>
-<li><strong>Decision Period:</strong> 5 days</li>
-<li><strong>Confirm Period:</strong> 3 hours</li>
-<li><strong>Minimum Enactment Period:</strong> 1 block (effectively immediate)</li>
+<li><strong>Name</strong>: signaling</li>
+<li><strong>Maximum Deciding</strong>: 10 referenda concurrently</li>
+<li><strong>Decision Deposit</strong>: 100 QUAN</li>
+<li><strong>Prepare Period</strong>: 6 hours</li>
+<li><strong>Decision Period</strong>: 3 days</li>
+<li><strong>Confirm Period</strong>: 6 hours</li>
+<li><strong>Minimum Enactment Period</strong>: 6 hours</li>
 </ul>
-<p><strong>Approval and Support Thresholds:</strong></p>
+<h2 id="approval-and-support-thresholds">Approval and Support Thresholds</h2>
+<h3 id="minimum-approval">Minimum Approval</h3>
 <ul>
-<li><strong>Minimum Approval:</strong> Linear decreasing curve from 60% to 50%<ul>
+<li>Linear decreasing curve from 60% to 50%</li>
 <li>Requires 60% approval at the beginning of the voting period</li>
-<li>Requires a simple majority (50%) by the end</li>
+<li>Requires at least 50% approval at the end</li>
 </ul>
-</li>
-<li><strong>Minimum Support:</strong> Linear decreasing curve from 10% to 1%<ul>
-<li>Very low support threshold to encourage participation</li>
-<li>Only 1% of the total possible votes required by the end of the period</li>
-</ul>
-</li>
-</ul>
-<p><strong>Permissions:</strong></p>
+<h3 id="minimum-support">Minimum Support</h3>
 <ul>
-<li>Open to all network participants</li>
-<li>No restrictions on proposal submission or voting</li>
-<li>Intended for community signals, small treasury disbursements, and non-binding decisions</li>
-<li>Perfect for gauging community sentiment before proposing more significant changes </li>
+<li>Linear decreasing curve from 10% to 1%</li>
+<li>Requires at least 10% of the total possible votes at the beginning</li>
+<li>Minimum 1% of the total possible votes required by the end of the voting period</li>
 </ul>
-<p><a href="../#quantus-dao-governance-decision-paths">View detailed referendum parameters explanation</a></p></div>
+<h2 id="permissions">Permissions</h2>
+<ul>
+<li>Any account can submit and vote on proposals in this track</li>
+<li>Used for non-binding community sentiment gathering</li>
+<li>Ideal for feature requests, community feedback, and general signaling</li>
+</ul>
+<hr />
+<p><a href="../#referendum-parameters">View detailed referendum parameters explanation</a></p></div>
         
         
     </div>
