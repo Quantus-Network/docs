@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    
+    
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+
+    
+    <title>Vesting Scenarios - Quantus Network Docs</title>
+    
+
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/all.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/v4-shims.css">
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3.3.0/build/web/hack.min.css">
+    <link href='//rsms.me/inter/inter.css' rel='stylesheet' type='text/css'>
+    <link href='//fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,400,300,600,700&subset=latin-ext,latin' rel='stylesheet' type='text/css'>
+    <link href="../../css/bootstrap-custom.min.css" rel="stylesheet">
+    <link href="../../css/base.min.css" rel="stylesheet">
+    <link href="../../css/cinder.min.css" rel="stylesheet">
+
+    
+        
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.18.0/build/styles/github.min.css">
+        
+    
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+            <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+        <![endif]-->
+
+    
+
+     
+</head>
+
+<body>
+
+    <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            
+
+            <!-- Main title -->
+
+            
+              <a class="navbar-brand" href="../..">Quantus Network Docs</a>
+            
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+                <!-- Main navigation -->
+                <ul class="nav navbar-nav">
+                
+                
+                    <li >
+                        <a href="../..">Home</a>
+                    </li>
+                
+                
+                
+                    <li class="dropdown active">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Governance <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../">Overview</a>
+</li>
+
+                        
+                            
+  <li class="dropdown-submenu">
+    <a tabindex="-1" href="">Governance Paths</a>
+    <ul class="dropdown-menu">
+        
+            
+<li >
+    <a href="../path_0/">Path 0</a>
+</li>
+
+        
+            
+<li >
+    <a href="../path_1/">Path 1</a>
+</li>
+
+        
+            
+<li >
+    <a href="../path_2/">Path 2</a>
+</li>
+
+        
+            
+<li >
+    <a href="../path_3/">Path 3</a>
+</li>
+
+        
+            
+<li >
+    <a href="../path_4/">Path 4</a>
+</li>
+
+        
+            
+<li >
+    <a href="../path_5/">Path 5</a>
+</li>
+
+        
+    </ul>
+  </li>
+
+                        
+                            
+<li class="active">
+    <a href="./">Vesting Scenarios</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                </ul>
+
+            <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="#" data-toggle="modal" data-target="#mkdocs_search_modal">
+                            <i class="fas fa-search"></i> Search
+                        </a>
+                    </li>
+                    <li >
+                        <a rel="prev" href="../path_5/">
+                            <i class="fas fa-arrow-left"></i> Previous
+                        </a>
+                    </li>
+                    <li class="disabled">
+                        <a rel="next" >
+                            Next <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+    <div class="container">
+        
+        
+        <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+        <li class="first-level active"><a href="#vesting-scenarios-in-quantus-governance">Vesting Scenarios in Quantus Governance</a></li>
+            <li class="second-level"><a href="#basic-grant-application-with-vesting">Basic Grant Application with Vesting</a></li>
+                
+                <li class="third-level"><a href="#key-components">Key Components:</a></li>
+            <li class="second-level"><a href="#multi-milestone-grant-process">Multi-Milestone Grant Process</a></li>
+                
+                <li class="third-level"><a href="#features">Features:</a></li>
+            <li class="second-level"><a href="#technical-collective-milestone-evaluation">Technical Collective Milestone Evaluation</a></li>
+                
+                <li class="third-level"><a href="#process-flow">Process Flow:</a></li>
+            <li class="second-level"><a href="#emergency-vesting-operations">Emergency Vesting Operations</a></li>
+                
+                <li class="third-level"><a href="#emergency-features">Emergency Features:</a></li>
+            <li class="second-level"><a href="#treasury-integration">Treasury Integration</a></li>
+                
+                <li class="third-level"><a href="#integration-features">Integration Features:</a></li>
+            <li class="second-level"><a href="#implementation-details">Implementation Details</a></li>
+                
+                <li class="third-level"><a href="#vesting-schedule-configuration">Vesting Schedule Configuration</a></li>
+                <li class="third-level"><a href="#governance-integration">Governance Integration</a></li>
+            <li class="second-level"><a href="#best-practices">Best Practices</a></li>
+                
+            <li class="second-level"><a href="#security-considerations">Security Considerations</a></li>
+                
+    </ul>
+</div></div>
+        <div class="col-md-9" role="main">
+
+<h1 id="vesting-scenarios-in-quantus-governance">Vesting Scenarios in Quantus Governance<a class="headerlink" href="#vesting-scenarios-in-quantus-governance" title="Permanent link">&para;</a></h1>
+<div class="admonition warning">
+<p class="admonition-title">Implementation Examples</p>
+<p>The scenarios described below are examples of possibilities provided by the pallets used in the system with their current configuration. These examples demonstrate the capabilities of the underlying pallets but may not reflect the exact implementation in production.</p>
+</div>
+<p>This document outlines various vesting scenarios and their implementation within the Quantus governance system. These scenarios demonstrate how vesting can be integrated with different governance processes to ensure controlled and secure fund distribution.</p>
+<h2 id="basic-grant-application-with-vesting">Basic Grant Application with Vesting<a class="headerlink" href="#basic-grant-application-with-vesting" title="Permanent link">&para;</a></h2>
+<p>The basic grant application process demonstrates a two-stage governance pattern:</p>
+<ol>
+<li><strong>Initial Approval</strong>: Community referendum approves the principle of the grant</li>
+<li><strong>Implementation</strong>: Treasury council implements the approved grant with appropriate vesting schedule</li>
+</ol>
+<h3 id="key-components">Key Components:<a class="headerlink" href="#key-components" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Treasury track for initial approval</li>
+<li>Vesting schedule implementation after approval</li>
+<li>Conviction voting for community participation</li>
+<li>Configurable vesting periods based on grant type</li>
+</ul>
+<h2 id="multi-milestone-grant-process">Multi-Milestone Grant Process<a class="headerlink" href="#multi-milestone-grant-process" title="Permanent link">&para;</a></h2>
+<p>This scenario implements a progressive funding approach with multiple milestones:</p>
+<ol>
+<li><strong>Initial Plan Approval</strong>: Single referendum approves the entire grant plan</li>
+<li><strong>Milestone-Based Releases</strong>: Each milestone is evaluated by the Technical Collective</li>
+<li><strong>Dynamic Vesting</strong>: Vesting schedules are adjusted based on milestone quality</li>
+</ol>
+<h3 id="features">Features:<a class="headerlink" href="#features" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Atomic milestone funding</li>
+<li>Multiple vesting schedules</li>
+<li>Technical Collective oversight</li>
+<li>Quality-based vesting adjustments</li>
+</ul>
+<h2 id="technical-collective-milestone-evaluation">Technical Collective Milestone Evaluation<a class="headerlink" href="#technical-collective-milestone-evaluation" title="Permanent link">&para;</a></h2>
+<p>The Technical Collective plays a crucial role in milestone evaluation:</p>
+<ol>
+<li><strong>Initial Approval</strong>: Community referendum approves overall grant plan</li>
+<li><strong>Milestone Evaluation</strong>: Technical Collective evaluates each milestone</li>
+<li><strong>Vesting Determination</strong>: Technical Collective sets vesting schedules based on quality</li>
+</ol>
+<h3 id="process-flow">Process Flow:<a class="headerlink" href="#process-flow" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Grantee delivers milestone proof</li>
+<li>Technical Collective evaluates the work</li>
+<li>Payment is released with appropriate vesting schedule</li>
+<li>Vesting period is determined by quality assessment</li>
+</ol>
+<h2 id="emergency-vesting-operations">Emergency Vesting Operations<a class="headerlink" href="#emergency-vesting-operations" title="Permanent link">&para;</a></h2>
+<p>The system includes mechanisms for emergency intervention:</p>
+<ol>
+<li><strong>Schedule Management</strong>: Ability to modify or merge vesting schedules</li>
+<li><strong>Atomic Operations</strong>: Batch calls for emergency actions</li>
+<li><strong>System Integrity</strong>: Maintains user position during interventions</li>
+</ol>
+<h3 id="emergency-features">Emergency Features:<a class="headerlink" href="#emergency-features" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Atomic batch operations</li>
+<li>Schedule merging capabilities</li>
+<li>Fund recovery mechanisms</li>
+<li>System integrity preservation</li>
+</ul>
+<h2 id="treasury-integration">Treasury Integration<a class="headerlink" href="#treasury-integration" title="Permanent link">&para;</a></h2>
+<p>The treasury system integrates with vesting through:</p>
+<ol>
+<li><strong>Atomic Operations</strong>: Combined treasury spend and vesting creation</li>
+<li><strong>Batch Processing</strong>: Multiple operations in single transaction</li>
+<li><strong>Automated Implementation</strong>: Streamlined fund distribution</li>
+</ol>
+<h3 id="integration-features">Integration Features:<a class="headerlink" href="#integration-features" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Atomic treasury spend + vesting creation</li>
+<li>Batch call processing</li>
+<li>Automated fund management</li>
+<li>Integrated tracking systems</li>
+</ul>
+<h2 id="implementation-details">Implementation Details<a class="headerlink" href="#implementation-details" title="Permanent link">&para;</a></h2>
+<h3 id="vesting-schedule-configuration">Vesting Schedule Configuration<a class="headerlink" href="#vesting-schedule-configuration" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">VestingInfo</span><span class="p">::</span><span class="n">new</span><span class="p">(</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span><span class="w">           </span><span class="c1">// Total amount to vest</span>
+<span class="w">    </span><span class="n">per_block</span><span class="p">,</span><span class="w">        </span><span class="c1">// Amount unlocked per block</span>
+<span class="w">    </span><span class="n">start_block</span><span class="w">      </span><span class="c1">// Starting block number</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="governance-integration">Governance Integration<a class="headerlink" href="#governance-integration" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// Two-stage process example</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">treasury_call</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">RuntimeCall</span><span class="p">::</span><span class="n">TreasuryPallet</span><span class="p">(</span><span class="n">pallet_treasury</span><span class="p">::</span><span class="n">Call</span><span class="p">::</span><span class="n">spend</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">asset_kind</span><span class="p">:</span><span class="w"> </span><span class="nb">Box</span><span class="p">::</span><span class="n">new</span><span class="p">(()),</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">:</span><span class="w"> </span><span class="nc">grant_amount</span><span class="p">,</span>
+<span class="w">    </span><span class="n">beneficiary</span><span class="p">:</span><span class="w"> </span><span class="nb">Box</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">MultiAddress</span><span class="p">::</span><span class="n">Id</span><span class="p">(</span><span class="n">beneficiary</span><span class="p">)),</span>
+<span class="w">    </span><span class="n">valid_from</span><span class="p">:</span><span class="w"> </span><span class="nb">None</span><span class="p">,</span>
+<span class="p">});</span>
+
+<span class="kd">let</span><span class="w"> </span><span class="n">vesting_call</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">RuntimeCall</span><span class="p">::</span><span class="n">Vesting</span><span class="p">(</span><span class="n">pallet_vesting</span><span class="p">::</span><span class="n">Call</span><span class="p">::</span><span class="n">vested_transfer</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">target</span><span class="p">:</span><span class="w"> </span><span class="nc">MultiAddress</span><span class="p">::</span><span class="n">Id</span><span class="p">(</span><span class="n">beneficiary</span><span class="p">),</span>
+<span class="w">    </span><span class="n">schedule</span><span class="p">:</span><span class="w"> </span><span class="nc">vesting_info</span><span class="p">,</span>
+<span class="p">});</span>
+</code></pre></div>
+<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Grant Planning</strong></li>
+<li>Define clear milestones</li>
+<li>Set appropriate vesting periods</li>
+<li>
+<p>Consider technical complexity</p>
+</li>
+<li>
+<p><strong>Implementation</strong></p>
+</li>
+<li>Use atomic operations where possible</li>
+<li>Implement proper error handling</li>
+<li>
+<p>Maintain system integrity</p>
+</li>
+<li>
+<p><strong>Monitoring</strong></p>
+</li>
+<li>Track vesting schedules</li>
+<li>Monitor milestone completion</li>
+<li>
+<p>Maintain audit trail</p>
+</li>
+<li>
+<p><strong>Emergency Procedures</strong></p>
+</li>
+<li>Define clear intervention criteria</li>
+<li>Implement atomic operations</li>
+<li>Preserve user positions</li>
+</ol>
+<h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Access Control</strong></li>
+<li>Technical Collective authority</li>
+<li>Treasury council permissions</li>
+<li>
+<p>Emergency intervention rights</p>
+</li>
+<li>
+<p><strong>Transaction Safety</strong></p>
+</li>
+<li>Atomic operations</li>
+<li>Batch processing</li>
+<li>
+<p>Error handling</p>
+</li>
+<li>
+<p><strong>Fund Protection</strong></p>
+</li>
+<li>Vesting schedules</li>
+<li>Milestone verification</li>
+<li>Emergency procedures </li>
+</ol></div>
+        
+        
+    </div>
+
+    
+      <footer class="col-md-12 text-center">
+          
+          
+            <hr>
+            <p>
+            <small>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</small>
+            </p>
+          
+
+          
+          
+      </footer>
+    
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="../../js/bootstrap-3.0.3.min.js"></script>
+
+    
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.18.0/build/highlight.min.js"></script>
+        
+    <script>hljs.initHighlightingOnLoad();</script>
+    
+
+    <script>var base_url = "../.."</script>
+    
+    <script src="../../js/base.js"></script>
+    <script src="../../search/main.js"></script>
+
+    <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">&times;</span>
+                    <span class="sr-only">Close</span>
+                </button>
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+            </div>
+            <div class="modal-body">
+                <p>
+                    From here you can search these documents. Enter
+                    your search terms below.
+                </p>
+                <form>
+                    <div class="form-group">
+                        <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+    </body>
+
+</html>
