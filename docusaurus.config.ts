@@ -3,8 +3,8 @@ import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: 'Quantus Network',
-  tagline: 'Post-Quantum Secure Blockchain',
+  title: 'Quantus',
+  tagline: 'Quantum-Secure Encrypted Money',
   favicon: 'img/favicon.ico',
 
   future: {
@@ -56,7 +56,10 @@ const config: Config = {
       theme: { light: 'default', dark: 'dark' },
     },
     navbar: {
-      title: 'Quantus',
+      logo: {
+        src: 'img/logo.svg',
+        alt: 'Quantus Logo',
+      },
       items: [
         {
           type: 'docSidebar',
@@ -103,7 +106,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright ${new Date().getFullYear()} Quantus Network`,
+      copyright: `Copyright ${new Date().getFullYear()} Quantus`,
     },
     prism: {
       theme: prismThemes.github,
