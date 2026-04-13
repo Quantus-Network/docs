@@ -58,7 +58,7 @@ const config: Config = {
     navbar: {
       logo: {
         src: 'img/logo.svg',
-        alt: 'Quantus Logo',
+        alt: 'Quantus logomark',
       },
       items: [
         {
