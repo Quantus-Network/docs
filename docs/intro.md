@@ -29,6 +29,7 @@ These docs follow a layered depth model: start broad, go deep where it matters t
 - [User Safety](./deep-dives/safety): Cancellation windows and reversible transaction mechanics
 - [Governance](./deep-dives/governance): Onchain governance and forkless runtime upgrades
 - [NEAR Integration](./deep-dives/near-integration): Cross-chain bridge and interoperability layer
+- [External Miner Protocol](./deep-dives/miner-protocol): QUIC protocol specification for custom miner implementations
 
 ### Guides
 

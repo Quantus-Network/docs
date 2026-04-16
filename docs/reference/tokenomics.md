@@ -10,11 +10,11 @@ Quantus follows Bitcoin's monetary model: fixed supply, proof-of-work distributi
 
 ## Supply
 
-**Maximum Supply: 21,000,000 QU**
+**Maximum Supply: 21,000,000 QUAN**
 
 | Property | Value |
 |----------|-------|
-| Token | QU |
+| Token | QUAN |
 | Decimals | 12 |
 | Max Supply | 21,000,000 |
 | Emission Model | Smooth exponential decay |
@@ -45,8 +45,8 @@ Assuming public sale hard cap fills:
 
 ### TGE vs Mining
 
-- **TGE Minted:** 35% (7,350,000 QU) -- Private sale + Public sale + DEX Liquidity
-- **Mining Emissions:** 65% (13,650,000 QU) -- Miners + Company dev tax, over ~40 years
+- **TGE Minted:** 35% (7,350,000 QUAN) -- Private sale + Public sale + DEX Liquidity
+- **Mining Emissions:** 65% (13,650,000 QUAN) -- Miners + Company dev tax, over ~40 years
 
 ### No Pre-Mine
 
@@ -93,5 +93,5 @@ Industry standard: token valuation = 2x equity valuation. All contracts reflect 
 | Public Sale | NEAR launchpad + CoinList/Echo | Up to 10% (hard cap) | $100M token |
 
 - Token sales only going forward (no more equity rounds)
-- Public sale proceeds are paired with equal QU into DEX liquidity
+- Public sale proceeds are paired with equal QUAN into DEX liquidity
 - Target: Public sale May 2026, TGE June 2026
