@@ -1,6 +1,7 @@
 ---
 sidebar_position: 2
 title: Miner App (GUI)
+draft: true
 ---
 
 # Miner App

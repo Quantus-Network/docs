@@ -15,6 +15,7 @@ All Quantus Network tools, resources, and community channels in one place.
 | Telemetry Dashboard | [telemetry.quantus.cat](https://telemetry.quantus.cat/) | Live node status, peer count, and sync progress |
 | Quantus Wallet | [linktr.ee/quantusnetwork](https://linktr.ee/quantusnetwork) | Mobile wallet for iOS and Android |
 | Miner App (GUI) | [GitHub Release](https://github.com/Quantus-Network/quantus-apps/releases/tag/miner-v0.3.1) | Desktop mining app for macOS, Linux, and Windows |
+| Subsquid Indexer | [subsquid.quantus.com](https://subsquid.quantus.com/blue/graphql) | GraphQL API for querying blocks, transactions, and miner rewards |
 | Testnet Faucet | [Reply to this post](https://x.com/QuantusNetwork/status/2033738875827589221) | Reply to the pinned post to receive testnet tokens |
 
 ## Research and Publications

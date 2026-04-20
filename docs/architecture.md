@@ -112,7 +112,7 @@ Quantus solves the signature bloat problem with aggregated ZK proofs:
 3. Thousands of these proofs are **aggregated** into a single ~100KB proof
 4. The aggregated proof is posted onchain, verifying all transactions at once
 
-**Result:** Raw PQC throughput of ~685 TPS is amplified to **~153,000 TPS** (223x improvement).
+**Result:** Raw PQC throughput of ~685 TPS is amplified to **~3,800 TPS** (~5.5x improvement).
 
 The privacy benefit is a side effect: the link between the original sender and the exit address is broken onchain (similar to Tornado Cash's mechanism). Amounts and exit addresses are visible; the sender-receiver link is not.
 

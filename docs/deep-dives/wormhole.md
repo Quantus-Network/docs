@@ -5,7 +5,7 @@ title: Wormhole & ZK Scaling
 
 # Wormhole & ZK Scaling
 
-The Wormhole system is Quantus's solution to the post-quantum signature bloat problem. It uses zero-knowledge proofs to aggregate thousands of transactions into a single compact proof, achieving ~153,000 TPS while also providing transaction privacy.
+The Wormhole system is Quantus's solution to the post-quantum signature bloat problem. It uses zero-knowledge proofs to aggregate thousands of transactions into a single compact proof, achieving ~3,800 TPS while also providing transaction privacy.
 
 ## The Problem
 
@@ -45,10 +45,10 @@ sequenceDiagram
 | Metric | Without Wormhole | With Wormhole |
 |--------|-----------------|---------------|
 | Per-transaction on-chain data | ~7,219 bytes (sig + pubkey) | Amortized ~few bytes (shared proof) |
-| Throughput | ~685 TPS | ~153,000 TPS |
-| Improvement | Baseline | **~223x** |
+| Throughput | ~685 TPS | ~3,800 TPS |
+| Improvement | Baseline | **~5.5x** |
 
-The aggregated proof is approximately 100KB regardless of how many transactions it contains, because Plonky2 supports recursive proof composition.
+The aggregated proof is approximately 100KB regardless of how many transactions it contains because Plonky2 supports recursive proof composition.
 
 ## ZK Proof System: Plonky2
 

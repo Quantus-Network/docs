@@ -36,14 +36,14 @@ sequenceDiagram
     participant Chain
     participant Recipient
 
-    Sender->>Chain: Send 100 QU with 10-block delay
+    Sender->>Chain: Send 100 QUAN with 10-block delay
     Note over Chain: Funds held in escrow
 
     alt Sender cancels within delay
         Sender->>Chain: Cancel transfer
-        Chain->>Sender: 100 QU returned
+        Chain->>Sender: 100 QUAN returned
     else Delay expires
-        Chain->>Recipient: 100 QU delivered
+        Chain->>Recipient: 100 QUAN delivered
     end
 ```
 

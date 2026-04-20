@@ -9,7 +9,7 @@ Quantus integrates with NEAR Protocol's chain abstraction infrastructure to enab
 
 ## Why NEAR?
 
-Quantus has a single native asset (QU) and no smart contracts. To interact with the broader crypto ecosystem (exchanges, DeFi, stablecoins), users need a bridge. NEAR's chain abstraction via **NEAR Intents** provides:
+Quantus has a single native asset (QUAN) and no smart contracts. To interact with the broader crypto ecosystem (exchanges, DeFi, stablecoins), users need a bridge. NEAR's chain abstraction via **NEAR Intents** provides:
 
 - **Decentralized signing** -- MPC threshold signatures instead of a trusted bridge operator
 - **Cross-chain execution** -- Intent-based transactions that settle on both chains
@@ -55,17 +55,6 @@ This replaces the traditional "multisig bridge" model (where N-of-M known signer
 **Source:** [near-mpc](https://github.com/Quantus-Network/near-mpc) -- Fork of NEAR's MPC node implementation
 **Audit:** Hashcloak threshold signature audit (in progress)
 
-## Swap Button
-
-The Quantus mobile app includes a "Swap" button that initiates cross-chain transfers through the NEAR Intents integration. From the user's perspective, it works like a simple exchange:
-
-1. User taps Swap in the Quantus app
-2. Selects the amount and destination chain/token
-3. Transaction is routed through the MPC network
-4. User receives the target asset on the destination chain
-
-This feature is currently being built and will go through Apple App Store approval (~6 week process).
-
 ## Forked Dependencies
 
 Quantus maintains forks of NEAR infrastructure adapted for post-quantum integration:
@@ -82,5 +71,4 @@ Quantus maintains forks of NEAR infrastructure adapted for post-quantum integrat
 | MPC node implementation | In development |
 | Threshold signature audit (Hashcloak) | In progress |
 | NEAR Intents integration | In development |
-| Swap button (mobile app) | In development, pending Apple approval |
 | Testnet integration | Planned |

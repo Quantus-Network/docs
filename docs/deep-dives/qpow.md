@@ -50,12 +50,12 @@ flowchart TD
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| Block Time | 12 seconds target | `TARGET_BLOCK_TIME_MS` |
+| Block Time | ~6 seconds target | Planck testnet |
 | Max Reorg Depth | 180 blocks | `MaxReorgDepth` |
 | Difficulty Adjustment | +/-10% per block | `DifficultyAdjustPercentClamp` |
 | EMA Smoothing | alpha = 0.1 | `EmaAlpha = 100/1000` |
 | Finalization | 179 blocks behind best | `MaxReorgDepth - 1` |
-| Native Token | QU (12 decimals) | Max supply 21,000,000 |
+| Native Token | QUAN (12 decimals) | Max supply 21,000,000 |
 | SS58 Prefix | 189 | Addresses start with `qz...` |
 
 ## Difficulty Adjustment
@@ -77,40 +77,47 @@ Instead of "longest chain" (most blocks), Quantus uses **heaviest chain** (most 
 - Fork choice selects the chain with highest `TotalWork`
 - This correctly weights high-difficulty blocks over many easy blocks
 
-Finalization occurs automatically at `MaxReorgDepth - 1` blocks behind the best block (179 blocks), meaning blocks older than ~36 minutes are considered final.
+Finalization occurs automatically at `MaxReorgDepth - 1` blocks behind the best block (179 blocks), meaning blocks older than ~18 minutes are considered final.
 
 ## Mining Modes
 
-### Local Mining (Built-in)
+### Built-in Mining (CPU Only)
 
-The node binary includes a built-in miner for testing and small-scale mining:
+The node binary includes a basic CPU-only miner for testing and small-scale mining:
 
 ```bash
 ./quantus-node \
     --validator \
-    --chain dirac \
-    --rewards-preimage <YOUR_PREIMAGE>
+    --chain planck \
+    --node-key-file ~/.quantus/node_key.p2p \
+    --rewards-inner-hash <YOUR_INNER_HASH>
 ```
 
-Processes 50,000 nonces per batch.
+Processes 50,000 nonces per batch. Built-in mining is limited to ~15 MH/s per CPU thread.
 
-### External Mining
+### External Mining (GPU Recommended)
 
-For higher performance, a separate miner process offloads the PoW computation:
+For higher performance, a separate miner process offloads the PoW computation. The node acts as a QUIC server and the miner connects as a client:
 
 ```bash
-# Start the external miner
-./quantus-miner
-
-# Start the node pointing to the external miner
-./quantus-node \
+# Start the node with the miner listen port open
+RUST_LOG=info ./quantus-node \
     --validator \
-    --chain dirac \
-    --external-miner-url http://127.0.0.1:9833 \
-    --rewards-preimage <YOUR_PREIMAGE>
+    --chain planck \
+    --node-key-file ~/.quantus/node_key.p2p \
+    --rewards-inner-hash <YOUR_INNER_HASH> \
+    --miner-listen-port 9833
+
+# In a separate terminal, start the external miner
+RUST_LOG=info ./quantus-miner serve \
+    --node-addr 127.0.0.1:9833 \
+    --gpu-devices 1 \
+    --cpu-workers 0
 ```
 
-The external miner communicates via HTTP API on port 9833, receiving mining jobs and submitting solutions.
+GPU mining produces ~500-1000 MH/s vs ~15 MH/s per CPU thread. Multiple miners can connect to the same node simultaneously -- the node broadcasts jobs to all connected miners and the first valid result wins.
+
+For the full QUIC protocol specification, see [External Miner Protocol](./miner-protocol).
 
 **Source:** [quantus-miner](https://github.com/Quantus-Network/quantus-miner)
 
@@ -127,11 +134,13 @@ All mining rewards are sent to **wormhole addresses** derived from the miner's p
 ### Wormhole Address Derivation for Miners
 
 1. Generate a wormhole key pair: `./quantus-node key quantus --scheme wormhole`
-2. The `inner_hash` (preimage) is used as the `--rewards-preimage` parameter
-3. The node derives the wormhole address on startup
-4. All block rewards and transaction fees are sent to this address
+2. Save all three output values: **Address** (where rewards go), **inner_hash** (preimage for the node), and **Secret** (private key proving ownership)
+3. The `inner_hash` is used as the `--rewards-inner-hash` parameter
+4. The node derives the wormhole address on startup and logs it
 
-This means mining rewards are automatically privacy-preserving. The miner's identity is not linked to their reward address onchain.
+Existing wallet holders can derive a wormhole keypair from an existing mnemonic via `--words "your 24 word mnemonic"` or from a seed via `--seed <64-char-hex>`.
+
+This means mining rewards are automatically privacy-preserving. The miner's identity is not linked to their reward address on-chain.
 
 ### Emission Schedule
 
