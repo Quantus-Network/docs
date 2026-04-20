@@ -1,15 +1,16 @@
 import React, {useState, useCallback, useEffect, type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {useLocation} from '@docusaurus/router';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import styles from './styles.module.css';
 
 const MINING_PATH = '/guides/mining';
-const SKILL_URL = '/skills/mining-skill.md';
 
 export default function CopySkillButton(): ReactNode {
   const [copied, setCopied] = useState(false);
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const location = useLocation();
+  const skillUrl = useBaseUrl('/skills/mining-skill.md');
 
   const isMiningPage = location.pathname.replace(/\/$/, '') === MINING_PATH;
 
@@ -24,15 +25,19 @@ export default function CopySkillButton(): ReactNode {
 
   const handleCopy = useCallback(async () => {
     try {
-      const res = await fetch(SKILL_URL);
+      const res = await fetch(skillUrl);
+      if (!res.ok) {
+        console.error(`Failed to fetch skill: ${res.status}`);
+        return;
+      }
       const text = await res.text();
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      console.error('Failed to copy skill');
+    } catch (err) {
+      console.error('Failed to copy skill', err);
     }
-  }, []);
+  }, [skillUrl]);
 
   if (!isMiningPage || !container) return null;
 
