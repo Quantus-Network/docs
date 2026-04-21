@@ -165,10 +165,10 @@ https://github.com/Quantus-Network/quantus-cli/releases/latest
 #### 2. Extract, make executable, and clear the macOS quarantine flag:
 
 ```bash
-tar -xzf quantus-*-quantus-cli.tar.gz || tar -xzf quantus-cli-*.tar.gz
-mv */quantus ./quantus 2>/dev/null || true
+tar -xzf quantus-cli-*.tar.gz --strip-components=1
 chmod +x quantus
-xattr -d com.apple.quarantine quantus 2>/dev/null || true
+xattr -d com.apple.quarantine quantus
+./quantus --version
 ```
 #### 3. Import your secret phrase into a new wallet named mining (use the same words):
 
