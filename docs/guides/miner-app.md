@@ -10,7 +10,7 @@ The Quantus Miner App is the easiest way to start mining. It provides a graphica
 
 ## Download
 
-Download the latest Miner App for your platform from [GitHub Releases](https://github.com/Quantus-Network/quantus-apps/releases/tag/miner-v0.3.1):
+Download the latest Miner App for your platform from [GitHub Releases](https://github.com/Quantus-Network/quantus-apps/releases/latest):
 
 | Platform | File |
 |----------|------|

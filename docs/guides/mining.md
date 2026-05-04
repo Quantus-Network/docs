@@ -19,33 +19,31 @@ Before starting, you will need:
 
 3. **A wormhole address for rewards.** The chain only accumulates mining rewards to **wormhole addresses** -- not regular wallet addresses. Rewards sitting at a wormhole can later be claimed to either another wormhole address or a dilithium (regular wallet) address. You'll generate your wormhole address in the setup below.
 
-## Wormhole Address System
+## Understanding Wormhole Addresses
 
-Mining rewards are sent to a **wormhole address** derived from a 32-byte preimage you generate during setup (inner hash). 
+Mining rewards are sent to a **wormhole address** derived from a 32-byte preimage you generate during setup (aka your inner hash). 
 
-This is privacy-preserving by default -- all miners use wormhole addresses.
+This is privacy-preserving by default. All miners use must claim to wormhole addresses.
 
-**Existing wallet holders:** You can derive a wormhole keypair from an existing mnemonic or seed instead of generating a fresh one:
+Wormhole addresses look identical to regular transparent addresses, but they have a separate derivation path. 
 
-```bash
-./quantus-node key quantus --scheme wormhole --words "your 24 word mnemonic"
-```
+**If you already have an existing wallet:** You can derive a wormhole keypair from an existing mnemonic or seed instead of generating a fresh one. This is the recommended approach if you are mining for the first time. 
 
-If you run the command without `--words` or `--seed`, a brand new keypair is generated unrelated to any existing wallet.
+Currently, our mobile app only supports transparent addresses. So this guide will walk you through mining to a wormhole address and claiming into your transparent address so that you can see your rewards in the app, and use your tokens without depending on the CLI. 
 
 During setup you will run `key quantus --scheme wormhole`, which outputs three values:
 
 | Value | What it is | What to do |
 |-------|-----------|------------|
-| **Address** | Your wormhole address (where rewards are sent) | Save for monitoring |
+| **Address** | Your wormhole address (where rewards are sent) | Note for monitoring |
 | **inner_hash** | 32-byte preimage | Pass to the node via `--rewards-inner-hash` |
-| **Secret** | Private key proving ownership | Back up securely -- loss means loss of rewards |
+| **Secret** | Private key proving ownership | This can be recovered with your 24 word phrase |
 
 The node derives your wormhole address from the `inner_hash` and logs it on startup.
 
-:::info Built-in vs External Miner
-Running the node with `--validator` alone enables a basic **CPU-only** miner built into the node. For GPU mining and higher hash rates, use the **external miner** (separate `quantus-miner` binary). GPU mining is strongly recommended -- it produces ~500-1000 MH/s vs ~15 MH/s per CPU worker.
-:::
+The most important thing to back up is your 24 word phrase. 
+
+You shoould keep both your 24 word phrase and your secret secure and do not share either with anyone. 
 
 ---
 
@@ -60,6 +58,8 @@ Download it in your working directory.
 You will need to extract it into your working directory. To do this on MacOS simply double click.
 
 Note: That aarch64-apple is for apple silicon chips (M1 and above), and x86-apple is for intel based Macs.
+
+Now open your terminal, generat your node key, inner hash, and run the node in this terminal window. 
 
 **macOS only -- fix Gatekeeper permissions:**
 
@@ -128,6 +128,8 @@ Your `inner-hash` will be displayed from the commands in the above steps.
 ### 5. Start the Miner
 
 Download the miner binary from [Miner Releases](https://github.com/Quantus-Network/quantus-miner/releases/latest).
+
+**Open a new terminal window (cmd + t). Let the node run in the original terminal.**
 
 **macOS only:** 
 

@@ -26,8 +26,7 @@ These docs follow a layered depth model: start broad, go deep where it matters t
 - [Post-Quantum Cryptography](./deep-dives/pqc): ML-DSA-87 signatures, Poseidon2 hashing, and quantum threat modeling
 - [QPoW Consensus & Mining](./deep-dives/qpow): Lattice-based proof of work and mining economics
 - [Wormhole & ZK Scaling](./deep-dives/wormhole): Privacy-preserving addresses and ZK proof aggregation for 3,800 TPS
-- [User Safety](./deep-dives/safety): Cancellation windows and reversible transaction mechanics
-- Governance: Onchain governance and forkless runtime upgrades
+- [User Safety](./deep-dives/safety): Safety mechanics to prevent wrench attacks, fat fingering transactions, and losing funds. Guardian accounts, time-locked transactions, human readable checkphrases, etc.
 - [NEAR Integration](./deep-dives/near-integration): Cross-chain bridge and interoperability layer
 - [External Miner Protocol](./deep-dives/miner-protocol): QUIC protocol specification for custom miner implementations
 
