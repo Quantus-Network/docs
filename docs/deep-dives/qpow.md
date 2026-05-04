@@ -50,7 +50,7 @@ flowchart TD
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| Block Time | ~6 seconds target | Planck testnet |
+| Block Time | ~12 seconds target | Planck testnet |
 | Max Reorg Depth | 180 blocks | `MaxReorgDepth` |
 | Difficulty Adjustment | +/-10% per block | `DifficultyAdjustPercentClamp` |
 | EMA Smoothing | alpha = 0.1 | `EmaAlpha = 100/1000` |
