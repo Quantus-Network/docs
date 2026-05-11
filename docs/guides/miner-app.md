@@ -1,7 +1,6 @@
 ---
 sidebar_position: 2
 title: Miner App (GUI)
-draft: true
 ---
 
 # Miner App
@@ -18,29 +17,24 @@ Download the latest Miner App for your platform from [GitHub Releases](https://g
 | Linux (x64) | `quantus_miner_linux.tar.gz` |
 | Windows (x64) | `quantus_miner_windows.zip` |
 
-## Installation
-
-**macOS:** Download the `.zip` file, extract it, and run `Quantus Miner.app`. If macOS blocks the app, go to System Settings > Privacy & Security and click "Open Anyway."
-
-**Linux:** Download the `.tar.gz` file, extract it, and run the `quantus_miner` executable.
-
-**Windows:** Download the `.zip` file, extract it, and run `quantus_miner.exe`.
-
 ## Prerequisites
 
 Before you start mining, you need:
 
-1. A Quantus wallet address to receive rewards. Download the Quantus mobile wallet from [linktr.ee/quantusnetwork](https://linktr.ee/quantusnetwork) and create an account.
-2. A running Quantus node. See [Mining and Running a Node](./mining) for node setup.
+1. A Quantus wallet address to receive rewards. Download the Quantus mobile wallet from [quantus.com/wallet](https://www.quantus.com/wallet/) and create an account.
 
-The Miner App handles the mining computation, but it connects to your local node (which handles the blockchain networking and block submission).
+## Installation
 
-## Features
+**macOS:** Download the `.zip` file, extract it into your desired directory, and run `Quantus Miner.app`. If macOS blocks the app, go to System Settings > Privacy & Security and click "Open Anyway."
 
-- CPU and GPU mining support
-- Real-time hash rate display
-- Configure number of CPU workers and GPU devices
-- Simple start/stop controls
+**Linux:** Download the `.tar.gz` file, extract it into your desired directory, and run the `quantus_miner` executable.
+
+## Note on Syncing
+Once you input your inner hash (or seed phrase) you can begin syncing your node.
+
+Wait until the node is fully synced, and then begin mining. 
+
+Depending on your internet speed it may take 5-30 minutes for the node to full sync.
 
 ## Monitoring
 

@@ -7,13 +7,13 @@ Serves as investor-grade technical documentation covering architecture, cryptogr
 ## Setup
 
 ```bash
-npm install
+bun install
 ```
 
 ## Development
 
 ```bash
-npm run start
+bun start
 ```
 
 Starts a local dev server at `http://localhost:3000`. Changes are reflected live.
@@ -21,13 +21,13 @@ Starts a local dev server at `http://localhost:3000`. Changes are reflected live
 ## Build
 
 ```bash
-npm run build
+bun run build
 ```
 
 Generates static output in `build/`. Verify with:
 
 ```bash
-npm run serve
+bun run serve
 ```
 
 ## Structure
