@@ -124,6 +124,10 @@ Your `inner-hash` will be displayed from the commands in the above steps.
   --max-blocks-per-request 64 \
   --sync full
 ```
+#### Note on Syncing
+Once you begin syncing your node, wait until the node is fully synced before you begin mining. 
+
+Depending on your internet speed it may take 5-30 minutes for the node to full sync.
 
 ### 5. Start the Miner
 

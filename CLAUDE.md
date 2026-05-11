@@ -4,11 +4,13 @@ Technical documentation site for Quantus Network. Built with Docusaurus, deploye
 
 ## Build
 
+This project uses **bun** (not npm). `bun.lock` is the source of truth.
+
 ```bash
-npm install
-npm run start    # dev server at localhost:3000
-npm run build    # production build
-npm run serve    # serve production build locally
+bun install
+bun start        # dev server at localhost:3000
+bun run build    # production build
+bun run serve    # serve production build locally
 ```
 
 ## Structure

@@ -47,9 +47,8 @@ User-facing software for interacting with the network.
 | Repository | Language | Description |
 |------------|----------|-------------|
 | [quantus-cli](https://github.com/Quantus-Network/quantus-cli) · [DeepWiki](https://deepwiki.com/Quantus-Network/quantus-cli) | Rust | Command-line client for Quantus Network. |
-| [quantus-apps](https://github.com/Quantus-Network/quantus-apps) · [DeepWiki](https://deepwiki.com/Quantus-Network/quantus-apps) | Dart | Mobile and desktop wallet application (Flutter). |
-| [quantus-miner](https://github.com/Quantus-Network/quantus-miner) · [DeepWiki](https://deepwiki.com/Quantus-Network/quantus-miner) | Rust | External mining software (CPU/GPU). |
-| [miner-tauri-gui](https://github.com/Quantus-Network/miner-tauri-gui) · [DeepWiki](https://deepwiki.com/Quantus-Network/miner-tauri-gui) | Rust | Desktop mining GUI built with Tauri. |
+| [quantus-apps](https://github.com/Quantus-Network/quantus-apps) · [DeepWiki](https://deepwiki.com/Quantus-Network/quantus-apps) | Dart | Mobile and desktop wallet plus the desktop mining GUI (Flutter). |
+| [quantus-miner](https://github.com/Quantus-Network/quantus-miner) · [Latest Release](https://github.com/Quantus-Network/quantus-apps/releases/latest) · [DeepWiki](https://deepwiki.com/Quantus-Network/quantus-miner) | Rust | External mining software (CPU/GPU). Download the desktop mining GUI installer from the latest release. |
 | [quantus_ur](https://github.com/Quantus-Network/quantus_ur) · [DeepWiki](https://deepwiki.com/Quantus-Network/quantus_ur) | Rust | UR QR code implementation for hardware wallet communication. |
 
 ## Infrastructure
@@ -135,8 +134,3 @@ Websites, documentation, and research.
 | [hash-comparison](https://github.com/Quantus-Network/hash-comparison) · [DeepWiki](https://deepwiki.com/Quantus-Network/hash-comparison) | Rust | Benchmarks comparing hash function performance. |
 | [logs](https://github.com/Quantus-Network/logs) · [DeepWiki](https://deepwiki.com/Quantus-Network/logs) | -- | Operational logs. |
 
-## Release Management Test Repos
-
-Used for testing CI/CD and release workflows. Not production code.
-
-`chain-rm` | `chain-ru-test` | `chain-update2512` | `quantus-miner-rm` | `qp-poseidon-rm` | `poseidon-resonance-rm` | `plonky2-rm` | `plonky2-rm2` | `quantus-cli-rm`
