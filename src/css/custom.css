@@ -27,3 +27,21 @@
   --ifm-color-primary-lightest: #aad4ff;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* Local search (Cmd/Ctrl+K) */
+:root {
+  --search-local-highlight-color: var(--ifm-color-primary);
+  --search-local-modal-width: 560px;
+}
+
+html[data-theme='dark'] {
+  --search-local-highlight-color: var(--ifm-color-primary-light);
+}
+
+/* Highlight matched terms after navigating from search */
+mark {
+  background-color: rgba(74, 158, 255, 0.25);
+  color: inherit;
+  padding: 0 0.1em;
+  border-radius: 2px;
+}

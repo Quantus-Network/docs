@@ -23,7 +23,25 @@ const config: Config = {
     mermaid: true,
   },
 
-  themes: ['@docusaurus/theme-mermaid'],
+  themes: [
+    '@docusaurus/theme-mermaid',
+    [
+      require.resolve('@easyops-cn/docusaurus-search-local'),
+      {
+        hashed: true,
+        docsRouteBasePath: '/',
+        indexBlog: false,
+        indexPages: false,
+        highlightSearchTermsOnTargetPage: true,
+        searchResultLimits: 8,
+        searchResultContextMaxLength: 80,
+        fuzzyMatchingDistance: 1,
+        explicitSearchResultPath: true,
+        searchBarShortcut: true,
+        searchBarShortcutKeymap: 'mod+k',
+      },
+    ],
+  ],
 
   i18n: {
     defaultLocale: 'en',
