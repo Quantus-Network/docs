@@ -1,0 +1,79 @@
+.toolbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  max-width: 100%;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  font-family: inherit;
+  line-height: 1.4;
+  background: transparent;
+  border-radius: var(--ifm-global-radius);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.buttonDefault {
+  color: var(--ifm-color-emphasis-700);
+  border: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.buttonDefault:hover {
+  background: var(--ifm-color-emphasis-100);
+  border-color: var(--ifm-color-emphasis-500);
+  color: var(--ifm-color-emphasis-900);
+}
+
+.buttonDefault:active {
+  background: var(--ifm-color-emphasis-200);
+}
+
+.buttonPrimary {
+  color: var(--ifm-color-primary);
+  border: 1px solid var(--ifm-color-primary);
+}
+
+.buttonPrimary:hover {
+  background: var(--ifm-color-primary);
+  color: #fff;
+}
+
+.buttonPrimary:active {
+  opacity: 0.85;
+}
+
+/* Docusaurus collapses the navbar at 996px */
+@media (max-width: 996px) {
+  .toolbar {
+    position: static;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .button {
+    width: 100%;
+    white-space: normal;
+    text-align: center;
+    padding: 0.5rem 0.75rem;
+  }
+}

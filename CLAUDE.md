@@ -23,8 +23,8 @@ docs/
   guides/                      Mining app (GUI), mining + node setup (CLI)
   reference/                   Repo map, tokenomics, audits, roadmap, tools & community
 src/
-  components/CopyMarkdownButton/   "Copy as Markdown" button (injected on every page)
-  theme/DocItem/Layout/            Swizzled layout wrapper for the copy button
+  components/DocActionButtons/     Copy-as-Markdown and mining-skill buttons
+  theme/DocItem/Layout/            Swizzled layout wrapper for doc action buttons
   css/custom.css                   Dark theme, blue palette
 ```
 
