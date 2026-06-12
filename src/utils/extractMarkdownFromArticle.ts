@@ -1,13 +1,8 @@
-import React, {useState, useCallback, useEffect, type ReactNode} from 'react';
-import {createPortal} from 'react-dom';
-import styles from './styles.module.css';
-
 /**
  * Converts the rendered HTML content of a doc page's <article> element
- * into a simplified markdown-like plain text representation, then copies
- * it to the clipboard.
+ * into a simplified markdown-like plain text representation.
  */
-function extractMarkdownFromArticle(): string {
+export function extractMarkdownFromArticle(): string {
   const article = document.querySelector('article');
   if (!article) {
     return '';
@@ -36,8 +31,13 @@ function extractMarkdownFromArticle(): string {
     const el = node as HTMLElement;
     const tag = el.tagName.toLowerCase();
 
-    // Skip the copy-markdown button itself
-    if (el.classList.contains('copyMarkdownBtn')) {
+    // Skip doc action button toolbar
+    if (
+      el.classList.contains('copyMarkdownBtn') ||
+      el.classList.contains('copySkillBtn') ||
+      el.classList.contains('docActionToolbar') ||
+      el.hasAttribute('data-doc-action-buttons')
+    ) {
       return '';
     }
 
@@ -166,54 +166,4 @@ function extractMarkdownFromArticle(): string {
 
   // Clean up excessive blank lines
   return raw.replace(/\n{3,}/g, '\n\n').trim();
-}
-
-export default function CopyMarkdownButton(): ReactNode {
-  const [copied, setCopied] = useState(false);
-  const [container, setContainer] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    const article = document.querySelector('article');
-    if (article) {
-      article.style.position = 'relative';
-      setContainer(article);
-    }
-  }, []);
-
-  const handleCopy = useCallback(async () => {
-    const markdown = extractMarkdownFromArticle();
-    if (!markdown) return;
-
-    try {
-      await navigator.clipboard.writeText(markdown);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for older browsers / non-HTTPS contexts
-      const textarea = document.createElement('textarea');
-      textarea.value = markdown;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, []);
-
-  if (!container) return null;
-
-  return createPortal(
-    <button
-      type="button"
-      className={`${styles.copyButton} copyMarkdownBtn`}
-      onClick={handleCopy}
-      title="Copy page content as Markdown"
-      aria-label="Copy page content as Markdown">
-      {copied ? 'Copied!' : 'Copy as Markdown'}
-    </button>,
-    container,
-  );
 }

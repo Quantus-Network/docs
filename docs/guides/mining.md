@@ -7,7 +7,7 @@ title: Mining and Running a Node
 
 This guide covers connecting to the Quantus Planck testnet and mining. Works on macOS and Linux (including WSL2 on Windows). 
 
-Use the buttons in the top-right corner of this page to copy the full guide as Markdown, or to copy an AI mining skill you can give to an agent like Claude Code to walk you through setup interactively.
+Use the buttons at the top of this page to copy the full guide as Markdown, or to copy an AI mining skill you can give to an agent like Claude Code to walk you through setup interactively.
 
 ## Prerequisites
 
