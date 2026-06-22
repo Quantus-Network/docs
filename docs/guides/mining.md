@@ -19,6 +19,29 @@ Before starting, you will need:
 
 3. **A wormhole address for rewards.** The chain only accumulates mining rewards to **wormhole addresses** -- not regular wallet addresses. Rewards sitting at a wormhole can later be claimed to either another wormhole address or a dilithium (regular wallet) address. You'll generate your wormhole address in the setup below.
 
+## Automated Setup
+
+For a guided terminal workflow, use the mining setup script (macOS, Linux, or WSL2):
+
+```bash
+curl -fsSL https://docs.quantus.com/scripts/quantus-mining.sh -o quantus-mining.sh
+chmod +x quantus-mining.sh
+./quantus-mining.sh setup
+./quantus-mining.sh start
+```
+
+The script downloads node and miner binaries, generates your node identity and wormhole inner hash, and writes a config file at `~/quantus-mining/mining.conf`.
+
+**One terminal:** `./quantus-mining.sh start` — node output in your terminal (foreground); miner runs in the background (`~/quantus-mining/logs/miner.log`). Ctrl+C stops both.
+
+**Two terminals (matches the manual steps below):** run `./quantus-mining.sh start-node` in one terminal, then `./quantus-mining.sh start-miner` in another after the node is listening.
+
+Add `-d` or `--detach` to run both in the background. Stop with `./quantus-mining.sh stop` from any terminal (works for foreground and detached runs). Manage settings with `./quantus-mining.sh config show` or `./quantus-mining.sh config set CPU_WORKERS 4`.
+
+GPU mining is recommended when available. Mining rewards still accumulate at your wormhole address — see [Claiming Rewards](#claiming-rewards) below to move them to your wallet.
+
+Example config template: [mining.conf.example](/scripts/mining.conf.example).
+
 ## Understanding Wormhole Addresses
 
 Mining rewards are sent to a **wormhole address** derived from a 32-byte preimage you generate during setup (aka your inner hash). 
