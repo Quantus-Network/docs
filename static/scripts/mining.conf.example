@@ -4,6 +4,10 @@
 # File permissions should be 600 (the setup script sets this automatically).
 # Never store your 24-word mnemonic in this file — only INNER_HASH is persisted.
 
+# Deployment mode: binary (direct downloads) or docker (compose stack)
+RUN_MODE="binary"
+DOCKER_DIR="docker"
+
 # Node name shown on https://telemetry.quantus.cat/
 NODE_NAME="my-planck-node"
 
@@ -28,7 +32,8 @@ MINER_LISTEN_PORT=9833
 CPU_WORKERS=0
 GPU_DEVICES=1
 
-# Pinned release tags (set automatically during setup)
+# Pinned versions (set automatically during setup from GitHub releases)
+# Docker mode: ghcr.io image tags matching those releases.
 NODE_VERSION=""
 MINER_VERSION=""
 

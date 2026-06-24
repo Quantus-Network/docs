@@ -99,7 +99,7 @@ pub enum MinerMessage {
 |-------|------|-------------|
 | `job_id` | String | Unique identifier (UUID) |
 | `mining_hash` | String | Header hash (64 hex chars, no `0x` prefix) |
-| `distance_threshold` | String | Difficulty target (U512 as decimal string) |
+| `difficulty` | String | Difficulty target (U512 as decimal string). Must be non-zero. |
 
 Nonce range is not specified -- each miner independently selects a random starting point from the 512-bit nonce space.
 

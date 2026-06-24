@@ -30,13 +30,41 @@ chmod +x quantus-mining.sh
 ./quantus-mining.sh start
 ```
 
-The script downloads node and miner binaries, generates your node identity and wormhole inner hash, and writes a config file at `~/quantus-mining/mining.conf`.
+The script generates your wormhole inner hash, node identity, and a config file at `~/quantus-mining/mining.conf`. It can deploy either **native binaries** or a **Docker Compose stack** — you choose during setup.
 
-**One terminal:** `./quantus-mining.sh start` — node output in your terminal (foreground); miner runs in the background (`~/quantus-mining/logs/miner.log`). Ctrl+C stops both.
+### Deployment modes
+
+| Mode | Command | Best for |
+|------|---------|----------|
+| **Binary** (default) | `./quantus-mining.sh setup` or `setup --mode binary` | macOS; Linux x86_64 |
+| **Docker** | `./quantus-mining.sh setup --mode docker` | Linux ARM64, containerized deploy, or when you prefer not to install binaries locally |
+
+**Binary mode** downloads `quantus-node` and `quantus-miner` into `~/quantus-mining/bin/`.
+
+**Docker mode** requires Docker Desktop (or Docker Engine) with Compose v2 (`docker compose`) and a running daemon. It pulls `ghcr.io/quantus-network/quantus-node` and `ghcr.io/quantus-network/quantus-miner` (release tags from GitHub) and installs a compose stack under `~/quantus-mining/docker/` (`docker-compose.yml`, `init-node.sh`, node keys, and chain data).
+
+**Linux ARM64:** there is no native `quantus-miner` release for Linux ARM64. Use `--mode docker` or an x86_64 host.
+
+### Running the stack
+
+The same commands work for both modes; `RUN_MODE` in `mining.conf` selects binary vs Docker.
+
+**One terminal:** `./quantus-mining.sh start`
+
+- **Binary:** node output in your terminal (foreground); miner runs in the background (`~/quantus-mining/logs/miner.log`). Ctrl+C stops both.
+- **Docker:** both containers attach to your terminal. Ctrl+C stops both.
 
 **Two terminals (matches the manual steps below):** run `./quantus-mining.sh start-node` in one terminal, then `./quantus-mining.sh start-miner` in another after the node is listening.
 
-Add `-d` or `--detach` to run both in the background. Stop with `./quantus-mining.sh stop` from any terminal (works for foreground and detached runs). Manage settings with `./quantus-mining.sh config show` or `./quantus-mining.sh config set CPU_WORKERS 4`.
+Add `-d` or `--detach` to run both in the background. Stop with `./quantus-mining.sh stop` from any terminal (works for foreground and detached runs).
+
+**Docker logs (detached or troubleshooting):**
+
+```bash
+cd ~/quantus-mining/docker && docker compose logs -f
+```
+
+Manage settings with `./quantus-mining.sh config show` or `./quantus-mining.sh config set CPU_WORKERS 4`. Editable keys: `NODE_NAME`, `CPU_WORKERS`, `GPU_DEVICES`, `MINER_LISTEN_PORT`, `CHAIN`. In Docker mode, the script regenerates `docker/.env` on start after config changes.
 
 GPU mining is recommended when available. Mining rewards still accumulate at your wormhole address — see [Claiming Rewards](#claiming-rewards) below to move them to your wallet.
 
@@ -223,12 +251,22 @@ xattr -d com.apple.quarantine quantus
 
 
 ### **Logs & Diagnostics**
+
+**Binary / manual install:**
+
 ```bash
 # Real-time logs
 tail -f ~/.local/share/quantus-node/chains/planck/network/quantus-node.log
 
 # Or run with verbose logging
 RUST_LOG=info quantus-node [options]
+```
+
+**Docker (automated setup with `RUN_MODE=docker`):**
+
+```bash
+cd ~/quantus-mining/docker && docker compose logs -f
+# Chain data on disk: ~/quantus-mining/docker/node-data/
 ```
 
 #### **Inspect your node's P2P identity:**
