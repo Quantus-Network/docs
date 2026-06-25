@@ -19,6 +19,34 @@ Before starting, you will need:
 
 3. **A wormhole address for rewards.** The chain only accumulates mining rewards to **wormhole addresses** -- not regular wallet addresses. Rewards sitting at a wormhole can later be claimed to either another wormhole address or a dilithium (regular wallet) address. You'll generate your wormhole address in the setup below.
 
+## Understanding Wormhole Addresses
+
+Mining rewards are sent to a **wormhole address** derived from a 32-byte preimage you generate during setup (aka your inner hash). 
+
+This is privacy-preserving by default. All miners use must claim to wormhole addresses.
+
+Wormhole addresses look identical to regular transparent addresses, but they have a separate derivation path. 
+
+**If you already have an existing wallet:** You can derive a wormhole keypair from an existing mnemonic or seed instead of generating a fresh one. This is the recommended approach if you are mining for the first time. 
+
+Currently, our mobile app only supports transparent addresses. So this guide will walk you through mining to a wormhole address and claiming into your transparent address so that you can see your rewards in the app, and use your tokens without depending on the CLI. 
+
+During setup you will run `key quantus --scheme wormhole`, which outputs three values:
+
+| Value | What it is | What to do |
+|-------|-----------|------------|
+| **Address** | Your wormhole address (where rewards are sent) | Note for monitoring |
+| **inner_hash** | 32-byte preimage | Pass to the node via `--rewards-inner-hash` |
+| **Secret** | Private key proving ownership | This can be recovered with your 24 word phrase |
+
+The node derives your wormhole address from the `inner_hash` and logs it on startup.
+
+The most important thing to back up is your 24 word phrase. 
+
+You shoould keep both your 24 word phrase and your secret secure and do not share either with anyone. 
+
+---
+
 ## Automated Setup
 
 For a guided terminal workflow, use the mining setup script (macOS, Linux, or WSL2):
@@ -70,35 +98,7 @@ GPU mining is recommended when available. Mining rewards still accumulate at you
 
 Example config template: [mining.conf.example](/scripts/mining.conf.example).
 
-## Understanding Wormhole Addresses
-
-Mining rewards are sent to a **wormhole address** derived from a 32-byte preimage you generate during setup (aka your inner hash). 
-
-This is privacy-preserving by default. All miners use must claim to wormhole addresses.
-
-Wormhole addresses look identical to regular transparent addresses, but they have a separate derivation path. 
-
-**If you already have an existing wallet:** You can derive a wormhole keypair from an existing mnemonic or seed instead of generating a fresh one. This is the recommended approach if you are mining for the first time. 
-
-Currently, our mobile app only supports transparent addresses. So this guide will walk you through mining to a wormhole address and claiming into your transparent address so that you can see your rewards in the app, and use your tokens without depending on the CLI. 
-
-During setup you will run `key quantus --scheme wormhole`, which outputs three values:
-
-| Value | What it is | What to do |
-|-------|-----------|------------|
-| **Address** | Your wormhole address (where rewards are sent) | Note for monitoring |
-| **inner_hash** | 32-byte preimage | Pass to the node via `--rewards-inner-hash` |
-| **Secret** | Private key proving ownership | This can be recovered with your 24 word phrase |
-
-The node derives your wormhole address from the `inner_hash` and logs it on startup.
-
-The most important thing to back up is your 24 word phrase. 
-
-You shoould keep both your 24 word phrase and your secret secure and do not share either with anyone. 
-
----
-
-## Installation (Mac / Linux)
+## Manual Installation (Mac / Linux)
 
 ### 1. Download the Node Binary
 
