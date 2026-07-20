@@ -175,26 +175,34 @@ b {
 /* -------------------------------------------------------------------------- */
 
 .navbar {
-  /* Blur on ::before so overflowing search dropdown is not trapped under the bar */
-  background-color: transparent;
+  /* Match quantus.com sticky glass: translucent void + backdrop blur.
+     Infima uses position:sticky which breaks backdrop-filter in Chromium —
+     override to fixed below (same as the main site). */
+  background-color: var(--q-navbar);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   border-bottom: 1px solid var(--q-border);
   box-shadow: none;
+  transition:
+    background-color 0.3s ease,
+    backdrop-filter 0.3s ease,
+    -webkit-backdrop-filter 0.3s ease;
 }
 
-.navbar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-color: var(--q-navbar);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.navbar.navbar--fixed-top.navbar--scrolled::before,
-.navbar.navbar--fixed-top:not(.navbar-sidebar--show)::before {
+.navbar.navbar--fixed-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   background-color: var(--q-navbar-scrolled);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Fixed nav is out of flow — reserve the height sticky used to occupy */
+.main-wrapper {
+  padding-top: var(--ifm-navbar-height);
 }
 
 .navbar__inner {
