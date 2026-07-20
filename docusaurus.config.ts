@@ -68,10 +68,11 @@ const config: Config = {
   themeConfig: {
     colorMode: {
       defaultMode: 'dark',
-      respectPrefersColorScheme: true,
+      disableSwitch: true,
+      respectPrefersColorScheme: false,
     },
     mermaid: {
-      theme: { light: 'default', dark: 'dark' },
+      theme: { light: 'dark', dark: 'dark' },
     },
     navbar: {
       logo: {
@@ -127,7 +128,7 @@ const config: Config = {
       copyright: `Copyright ${new Date().getFullYear()} Quantus`,
     },
     prism: {
-      theme: prismThemes.github,
+      theme: prismThemes.dracula,
       darkTheme: prismThemes.dracula,
       additionalLanguages: ['rust', 'bash', 'toml'],
     },
