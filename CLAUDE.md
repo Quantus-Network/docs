@@ -25,7 +25,7 @@ docs/
 src/
   components/DocActionButtons/     Copy-as-Markdown and mining-skill buttons
   theme/DocItem/Layout/            Swizzled layout wrapper for doc action buttons
-  css/custom.css                   Dark theme, blue palette
+  css/custom.css                   Dark-only brand theme (void/flare/Geist)
 ```
 
 ## Conventions
@@ -38,6 +38,7 @@ src/
 - Source claims from the codebase, DeepWiki exports, or quantusContext.md -- do not hallucinate
 - Mining guide follows the official wiki as source of truth: https://github.com/Quantus-Network/chain/wiki
 - Do NOT publish internal AI audit findings (quantus-audit/ is internal only)
+- Theme tokens follow the main website design system (void `#0e0e0e`, flare `#ff6b35`, content `#e8e6e0`, Geist + Geist Mono); dark mode only
 
 ## Key Links
 
@@ -51,4 +52,3 @@ src/
 Content was generated from DeepWiki exports and quantusContext.md. Needs:
 - Engineer accuracy review (especially deep dives and mining guide)
 - Copywriting sweep
-- Quantus logo (placeholder text header for now)
