@@ -13,6 +13,7 @@ const config: Config = {
 
   url: 'https://docs.quantus.com',
   baseUrl: '/',
+  trailingSlash: true,
 
   organizationName: 'Quantus-Network',
   projectName: 'docs',
