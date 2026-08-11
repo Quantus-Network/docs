@@ -34,8 +34,8 @@ During setup you will run `key quantus --scheme wormhole`, which outputs three v
 | Value | What it is | What to do |
 |-------|-----------|------------|
 | **Address** | Your wormhole address (where rewards are sent) | Note for monitoring |
-| **inner_hash** | 32-byte preimage | Pass to the node via `--rewards-inner-hash` |
-| **Secret** | Private key proving ownership | This can be recovered with your 24 word phrase |
+| **Inner Hash** | 32-byte preimage | Pass to the node via `--rewards-inner-hash` |
+| **Secret phrase** | The mnemonic that proves ownership | Back up securely -- this recovers everything |
 
 The node derives your wormhole address from the `inner_hash` and logs it on startup.
 
@@ -124,16 +124,16 @@ chmod u+x quantus-node
 ```
 
 ### 3. Generate Inner Hash
-Copy the 24 word secret phrase from your wallet app.
+Have the 24 word secret phrase from your wallet app ready.
 
-**Note: Save this secret phrase securely and do not share with anyone. It is used to access your rewards, move funds, and derive any information you need in the future.**
+**Note: Keep this secret phrase secure and do not share it with anyone. It is used to access your rewards, move funds, and derive any information you need in the future.**
 
-When using the below command, make sure to put your secret words in "quotation marks".
+Run the command below. It prompts for your 24 words and reads them **without echoing** -- the phrase is never passed on the command line, so it stays out of your shell history.
 
-Save the `Inner Hash`:
+Save the `Inner Hash` from the output:
 
 ```sh
-./quantus-node key quantus --scheme wormhole --words "your secret words"
+./quantus-node key quantus --scheme wormhole --words
 ```
 
 Alternatively, to generate a fresh wallet separate from the one in your wallet app:

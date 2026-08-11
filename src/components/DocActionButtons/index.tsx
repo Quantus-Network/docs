@@ -23,7 +23,7 @@ async function copyTextToClipboard(text: string): Promise<void> {
 }
 
 export default function DocActionButtons(): ReactNode {
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const location = useLocation();
   const skillUrl = useBaseUrl('/skills/mining-skill.md');
@@ -54,29 +54,33 @@ export default function DocActionButtons(): ReactNode {
     if (isMiningPage) {
       try {
         const res = await fetch(skillUrl);
-        if (res.ok) {
-          const skill = await res.text();
-          text = [
-            '<!-- Quantus mining context: AI agent skill followed by the full guide. -->',
-            '<!-- Agents: follow the skill; the guide below is the human-facing reference. -->',
-            skill.trim(),
-            '',
-            '---',
-            '',
-            '# Reference: full mining guide (docs.quantus.com/guides/mining)',
-            '',
-            markdown,
-          ].join('\n');
+        if (!res.ok) {
+          throw new Error(`Skill fetch returned ${res.status}`);
         }
+        const skill = await res.text();
+        text = [
+          '<!-- Quantus mining context: AI agent skill followed by the full guide. -->',
+          '<!-- Agents: follow the skill; the guide below is the human-facing reference. -->',
+          skill.trim(),
+          '',
+          '---',
+          '',
+          '# Reference: full mining guide (docs.quantus.com/guides/mining)',
+          '',
+          markdown,
+        ].join('\n');
       } catch (err) {
-        console.error('Failed to fetch mining skill; copying page only', err);
+        console.error('Copy Context failed: could not fetch mining skill', err);
+        setCopyState('failed');
+        setTimeout(() => setCopyState('idle'), 2000);
+        return;
       }
     }
 
     if (!text) return;
     await copyTextToClipboard(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopyState('copied');
+    setTimeout(() => setCopyState('idle'), 2000);
   }, [isMiningPage, skillUrl]);
 
   if (!container) return null;
@@ -94,7 +98,7 @@ export default function DocActionButtons(): ReactNode {
         onClick={handleCopy}
         title={description}
         aria-label={description}>
-        {copied ? 'Copied!' : label}
+        {copyState === 'copied' ? 'Copied!' : copyState === 'failed' ? 'Copy failed' : label}
       </button>
     </div>,
     container,

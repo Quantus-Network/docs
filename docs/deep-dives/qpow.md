@@ -121,12 +121,6 @@ For the full QUIC protocol specification, see [External Miner Protocol](./miner-
 
 **Source:** [quantus-miner](https://github.com/Quantus-Network/quantus-miner)
 
-### GUI Miner
-
-A desktop application built with Tauri wraps the miner CLI for non-technical users.
-
-**Source:** [miner-tauri-gui](https://github.com/Quantus-Network/miner-tauri-gui)
-
 ## Mining Rewards
 
 All mining rewards are sent to **wormhole addresses** derived from the miner's preimage. This is **not** optional. It is built into the protocol.
@@ -171,5 +165,4 @@ Block Reward = (MaxSupply - CurrentSupply) / EmissionDivisor
 | QPoW pallet (difficulty, rewards) | [chain](https://github.com/Quantus-Network/chain) | `pallets/qpow/` |
 | Mining rewards pallet | [chain](https://github.com/Quantus-Network/chain) | `pallets/mining-rewards/` |
 | External miner | [quantus-miner](https://github.com/Quantus-Network/quantus-miner) | Root |
-| Miner GUI | [miner-tauri-gui](https://github.com/Quantus-Network/miner-tauri-gui) | Root |
 | Poseidon2 hash function | [qp-poseidon](https://github.com/Quantus-Network/qp-poseidon) | Root |

@@ -37,7 +37,7 @@ The `key quantus --scheme wormhole` command outputs three values the user must s
 |-------|---------|----------|
 | **Address** | Wormhole address where rewards accumulate | Save for monitoring / explorer lookups |
 | **inner_hash** | 32-byte preimage | Pass to node via `--rewards-inner-hash` |
-| **Secret** | Private key proving ownership | Back up securely -- loss means loss of rewards |
+| **Secret phrase** | Mnemonic proving ownership | Back up securely -- loss means loss of rewards |
 
 ## Step 3: Configure Mining Resources
 
@@ -104,17 +104,18 @@ Two options -- ask the user which they want via AskUserQuestion:
 
 **Option A -- Derive from existing wallet mnemonic (recommended if they already have a Quantus wallet):**
 ```bash
-./quantus-node key quantus --scheme wormhole --words "24 word mnemonic here in quotes"
+./quantus-node key quantus --scheme wormhole --words
 ```
+`--words` takes no argument: the command reads the 24-word phrase from stdin (interactive prompt without echo on a terminal). **Have the user type their mnemonic into the prompt themselves in their own terminal. Never ask the user to share the mnemonic with you, and never place it in a command line, chat, or file.**
 
 **Option B -- Generate a fresh keypair unrelated to any existing wallet:**
 ```bash
 ./quantus-node key quantus --scheme wormhole
 ```
 
-In both cases, the command outputs the Address, inner_hash, and Secret. Display the output to the user and remind them:
+In both cases, the command outputs the Address, Inner Hash, and Secret phrase. Display the output to the user and remind them:
 
-> **Save all three values securely.** The `Secret` cannot be recovered. Loss of the Secret means loss of all rewards sitting at the wormhole address.
+> **Save all three values securely.** A lost `Secret phrase` cannot be recovered. Loss of the Secret means loss of all rewards sitting at the wormhole address.
 
 Store `INNER_HASH` for the next step. Also suggest the user save all three to a `.env` file with `chmod 600`.
 
