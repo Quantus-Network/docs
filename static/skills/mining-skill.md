@@ -113,11 +113,12 @@ Two options -- ask the user which they want via AskUserQuestion:
 ./quantus-node key quantus --scheme wormhole
 ```
 
-In both cases, the command outputs the Address, Inner Hash, and Secret phrase. Display the output to the user and remind them:
+The two options produce different output:
 
-> **Save all three values securely.** A lost `Secret phrase` cannot be recovered. Loss of the Secret means loss of all rewards sitting at the wormhole address.
+- **Option A (supplied mnemonic):** outputs `Address` and `Inner Hash` only. The mnemonic is deliberately **not** echoed back -- the user's existing offline backup of their wallet phrase remains the only copy, which is correct.
+- **Option B (fresh keypair):** additionally prints a new `Secret phrase`. Tell the user to write it down and store it in a secure offline backup (or password manager) immediately. **Never save the secret phrase to a file on disk, and never handle it yourself.** A lost secret phrase cannot be recovered -- losing it means losing all rewards at the wormhole address.
 
-Store `INNER_HASH` for the next step. Also suggest the user save all three to a `.env` file with `chmod 600`.
+Store `INNER_HASH` for the next step. It is fine to persist the `Address` and `Inner Hash` in a `chmod 600` `.env` file -- they are not secrets in the way the phrase is (the inner hash is a commitment) -- but the secret phrase never goes in any file.
 
 ## Step 8: Start the Node
 

@@ -128,11 +128,11 @@ All mining rewards are sent to **wormhole addresses** derived from the miner's p
 ### Wormhole Address Derivation for Miners
 
 1. Generate a wormhole key pair: `./quantus-node key quantus --scheme wormhole`
-2. Save all three output values: **Address** (where rewards go), **inner_hash** (preimage for the node), and **Secret** (private key proving ownership)
-3. The `inner_hash` is used as the `--rewards-inner-hash` parameter
+2. Save the output values: **Address** (where rewards go), **Inner Hash** (preimage for the node), and -- for freshly generated keys -- the **Secret phrase** (back it up offline; it proves ownership and is only printed when the key is newly generated)
+3. The `Inner Hash` is used as the `--rewards-inner-hash` parameter
 4. The node derives the wormhole address on startup and logs it
 
-Existing wallet holders can derive a wormhole keypair from an existing mnemonic via `--words "your 24 word mnemonic"` or from a seed via `--seed <64-char-hex>`.
+Existing wallet holders can derive a wormhole keypair from their mnemonic with `--words`, or from a seed with `--seed`. Both are flags with no argument: the secret is read from stdin (an interactive no-echo prompt on a terminal, or redirection like `--words < mnemonic.txt`) so it never appears in shell history or process arguments. When the mnemonic is supplied this way, the command prints only the Address and Inner Hash.
 
 This means mining rewards are automatically privacy-preserving. The miner's identity is not linked to their reward address on-chain.
 

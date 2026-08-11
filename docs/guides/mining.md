@@ -5,7 +5,7 @@ title: Mining and Running a Node
 
 # Mining and Running a Node
 
-This guide covers connecting to the Quantus Planck testnet and mining. Works on macOS and Linux (including WSL2 on Windows). 
+This guide covers connecting to the Quantus Planck testnet and mining. Works on macOS and Linux (including WSL2 on Windows).
 
 Use the **Copy Context** button at the top of this page to copy everything as Markdown -- the full guide plus an AI mining skill. Paste it to an agent like Claude Code to be walked through setup interactively, or keep it as an offline reference.
 
@@ -15,17 +15,17 @@ Before starting, you will need:
 
 1. **Quantus wallet.** Download the [Quantus wallet](https://linktr.ee/quantusnetwork) to hold funds, send transactions, and spend your mining rewards.
 
-2. **A mnemonic / seed phrase.** You can create one in the wallet app or in the CLI. 
+2. **A mnemonic / seed phrase.** You can create one in the wallet app or in the CLI.
 
 3. **A wormhole address for rewards.** The chain only accumulates mining rewards to **wormhole addresses** -- not regular wallet addresses. The wallet app supports wormhole addresses and encrypted accounts, so rewards mined to your wormhole address show up in the app and can be spent directly from your wormhole balance -- no separate claiming step. You'll generate your wormhole address in the setup below.
 
 ## Understanding Wormhole Addresses
 
-Mining rewards are sent to a **wormhole address** derived from a 32-byte preimage you generate during setup (aka your inner hash). 
+Mining rewards are sent to a **wormhole address** derived from a 32-byte preimage you generate during setup (aka your inner hash).
 
 This is privacy-preserving by default. All mining rewards are paid to wormhole addresses.
 
-Wormhole addresses look identical to regular transparent addresses, but they have a separate derivation path. 
+Wormhole addresses look identical to regular transparent addresses, but they have a separate derivation path.
 
 **If you already have an existing wallet:** You can derive a wormhole keypair from an existing mnemonic or seed instead of generating a fresh one. This is the recommended approach if you are mining for the first time -- use the same seed phrase as your wallet app, and your mining rewards will appear in the app automatically, spendable straight from your wormhole balance.
 
@@ -39,9 +39,9 @@ During setup you will run `key quantus --scheme wormhole`, which outputs three v
 
 The node derives your wormhole address from the `inner_hash` and logs it on startup.
 
-The most important thing to back up is your 24 word phrase. 
+The most important thing to back up is your 24 word phrase.
 
-You should keep both your 24 word phrase and your secret secure and do not share either with anyone. 
+You should keep both your 24 word phrase and your secret secure and do not share either with anyone.
 
 ---
 
@@ -100,7 +100,7 @@ Example config template: [mining.conf.example](/scripts/mining.conf.example).
 
 ### 1. Download the Node Binary
 
-Get the latest `quantus-node` binary for your platform from [GitHub Releases](https://github.com/Quantus-Network/chain/releases/latest). 
+Get the latest `quantus-node` binary for your platform from [GitHub Releases](https://github.com/Quantus-Network/chain/releases/latest).
 
 Download it in your working directory.
 
@@ -108,7 +108,7 @@ Extract it into your working directory (on macOS, double-clicking the archive wo
 
 Note: `aarch64-apple` builds are for Apple Silicon Macs (M1 and above); `x86-apple` is for Intel-based Macs.
 
-Now open your terminal to generate your node key and inner hash, and run the node in this terminal window. 
+Now open your terminal to generate your node key and inner hash, and run the node in this terminal window.
 
 **macOS only -- fix Gatekeeper permissions:**
 
@@ -180,7 +180,7 @@ Download the miner binary from [Miner Releases](https://github.com/Quantus-Netwo
 
 **Open a new terminal window (cmd + t). Let the node run in the original terminal.**
 
-**macOS only:** 
+**macOS only:**
 
 ```bash
 xattr -d com.apple.quarantine quantus-miner-macos-aarch64 && chmod u+x quantus-miner-macos-aarch64
@@ -194,9 +194,9 @@ Wait for the node logs to show the miner server is listening, then run the follo
 
 Depending on your machine and resources you can adjust `--gpu-devices` and `--cpu-workers` to see what provides the best balance of hash rate and system usability.
 
-The above command is fairly conservative for most modern hardware. 
+The above command is fairly conservative for most modern hardware.
 
-For example if you want to use your GPU and have many CPU cores available you could run 
+For example if you want to use your GPU and have many CPU cores available you could run
 
 ```bash
 ./quantus-miner-macos-aarch64 serve --cpu-workers 8 --gpu-devices 1 --node-addr 127.0.0.1:9833
@@ -245,7 +245,7 @@ cd ~/quantus-mining/docker && docker compose logs -f
 
 ### Key Management
 
-- **Back up your seed phrase securely** 
+- **Back up your seed phrase securely**
 
 ### Node Security
 

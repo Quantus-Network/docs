@@ -108,11 +108,12 @@ All components are hardened (indicated by `'`) because lattice-based key derivat
 # Generate a new key
 ./quantus-node key quantus
 
-# Restore from mnemonic
-./quantus-node key quantus --words "autumn bear..."
+# Restore from mnemonic (read from stdin: interactive no-echo prompt,
+# or e.g. `--words < mnemonic.txt`; never passed as an argument)
+./quantus-node key quantus --words
 
-# Restore from seed
-./quantus-node key quantus --seed "<64-HEX-STRING>"
+# Restore from seed (also read from stdin)
+./quantus-node key quantus --seed
 ```
 
 **Source:** [qp-rusty-crystals](https://github.com/Quantus-Network/qp-rusty-crystals) (hdwallet module)
