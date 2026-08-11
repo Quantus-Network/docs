@@ -322,7 +322,7 @@ prompt_run_mode() {
 wormhole_keygen() {
   if [ "${RUN_MODE:-binary}" = "docker" ]; then
     require_docker
-    docker run --rm "${NODE_IMAGE}:${NODE_VERSION:-latest}" \
+    docker run --rm -i "${NODE_IMAGE}:${NODE_VERSION:-latest}" \
       key quantus --scheme wormhole "$@" 2>&1
   else
     "$NODE_BIN" key quantus --scheme wormhole "$@" 2>&1
@@ -505,7 +505,7 @@ generate_wormhole_keys() {
       read -r -s mnemonic
       echo ""
       [ -n "$mnemonic" ] || die "Mnemonic cannot be empty"
-      output="$(wormhole_keygen --words "$mnemonic")"
+      output="$(printf '%s\n' "$mnemonic" | wormhole_keygen --words)"
       ;;
     2)
       output="$(wormhole_keygen)"

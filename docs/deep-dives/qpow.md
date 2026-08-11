@@ -117,15 +117,9 @@ RUST_LOG=info ./quantus-miner serve \
 
 GPU mining produces ~500-1000 MH/s vs ~15 MH/s per CPU thread. Multiple miners can connect to the same node simultaneously -- the node broadcasts jobs to all connected miners and the first valid result wins.
 
-For the full QUIC protocol specification, see [External Miner Protocol](./miner-protocol).
+For the full QUIC protocol specification, see [External Miner Protocol](./miner-protocol.md).
 
 **Source:** [quantus-miner](https://github.com/Quantus-Network/quantus-miner)
-
-### GUI Miner
-
-A desktop application built with Tauri wraps the miner CLI for non-technical users.
-
-**Source:** [miner-tauri-gui](https://github.com/Quantus-Network/miner-tauri-gui)
 
 ## Mining Rewards
 
@@ -134,11 +128,11 @@ All mining rewards are sent to **wormhole addresses** derived from the miner's p
 ### Wormhole Address Derivation for Miners
 
 1. Generate a wormhole key pair: `./quantus-node key quantus --scheme wormhole`
-2. Save all three output values: **Address** (where rewards go), **inner_hash** (preimage for the node), and **Secret** (private key proving ownership)
-3. The `inner_hash` is used as the `--rewards-inner-hash` parameter
+2. Save the output values: **Address** (where rewards go), **Inner Hash** (preimage for the node), and -- for freshly generated keys -- the **Secret phrase** (back it up offline; it proves ownership and is only printed when the key is newly generated)
+3. The `Inner Hash` is used as the `--rewards-inner-hash` parameter
 4. The node derives the wormhole address on startup and logs it
 
-Existing wallet holders can derive a wormhole keypair from an existing mnemonic via `--words "your 24 word mnemonic"` or from a seed via `--seed <64-char-hex>`.
+Existing wallet holders can derive a wormhole keypair from their mnemonic with `--words`, or from a seed with `--seed`. Both are flags with no argument: the secret is read from stdin (an interactive no-echo prompt on a terminal, or redirection like `--words < mnemonic.txt`) so it never appears in shell history or process arguments. When the mnemonic is supplied this way, the command prints only the Address and Inner Hash.
 
 This means mining rewards are automatically privacy-preserving. The miner's identity is not linked to their reward address on-chain.
 
@@ -171,5 +165,4 @@ Block Reward = (MaxSupply - CurrentSupply) / EmissionDivisor
 | QPoW pallet (difficulty, rewards) | [chain](https://github.com/Quantus-Network/chain) | `pallets/qpow/` |
 | Mining rewards pallet | [chain](https://github.com/Quantus-Network/chain) | `pallets/mining-rewards/` |
 | External miner | [quantus-miner](https://github.com/Quantus-Network/quantus-miner) | Root |
-| Miner GUI | [miner-tauri-gui](https://github.com/Quantus-Network/miner-tauri-gui) | Root |
 | Poseidon2 hash function | [qp-poseidon](https://github.com/Quantus-Network/qp-poseidon) | Root |

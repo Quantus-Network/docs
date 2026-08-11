@@ -32,7 +32,6 @@ These docs follow a layered depth model: start broad, go deep where it matters t
 
 ### Guides
 
-- Miner App (GUI): Download the desktop app and start mining with no terminal required
 - [Mining and Running a Node](./guides/mining): Set up a node, start mining, or run a non-mining full node
 
 ## Quick Links
@@ -40,6 +39,7 @@ These docs follow a layered depth model: start broad, go deep where it matters t
 - [Tools and Community](./reference/tools-and-community): Explorer, telemetry, faucet, socials, and all external links
 - [GitHub Organization](https://github.com/Quantus-Network): All repositories
 - [Whitepaper](https://quantus.com/whitepaper)
+- [Research Forum](https://research.quantus.com)
 - [Messari Research Report](https://messari.io/report/quantus-network-quantum-defense)
 - [Blog](https://www.quantus.com/blog/)
 - [quantus.com](https://quantus.com)

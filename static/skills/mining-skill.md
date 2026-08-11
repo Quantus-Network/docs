@@ -1,18 +1,18 @@
 ---
 name: mining
-description: Set up and manage a Quantus mining node on macOS or Linux. Walks the user through binary download, node identity, wormhole address generation, node + external miner launch, monitoring, and claiming rewards. Use when user says "set up mining," "start mining," "mine Quantus," "run a Quantus node," or similar.
+description: Set up and manage a Quantus mining node on macOS or Linux. Walks the user through binary download, node identity, wormhole address generation, node + external miner launch, and monitoring. Use when user says "set up mining," "start mining," "mine Quantus," "run a Quantus node," or similar.
 user_invocable: true
 ---
 
 # Quantus Mining Setup
 
-Interactive mining setup for the Quantus Planck testnet on macOS or Linux (including WSL2 on Windows). Handles node identity, wormhole address generation, node launch, external miner launch, and reward claiming.
+Interactive mining setup for the Quantus Planck testnet on macOS or Linux (including WSL2 on Windows). Handles node identity, wormhole address generation, node launch, and external miner launch. Rewards are spendable directly from the wallet app (no claiming step).
 
 This skill mirrors the public mining guide at https://docs.quantus.com/guides/mining but is optimized for an AI agent walking a user through setup step by step.
 
 ## Source of Truth
 
-Mining commands and flags are aligned with the official chain wiki (https://github.com/Quantus-Network/chain/wiki). Node binary releases: https://github.com/Quantus-Network/chain/releases/latest. Miner binary releases: https://github.com/Quantus-Network/quantus-miner/releases/latest. CLI releases: https://github.com/Quantus-Network/quantus-cli/releases/latest.
+Mining commands and flags are aligned with the official chain wiki (https://github.com/Quantus-Network/chain/wiki). Node binary releases: https://github.com/Quantus-Network/chain/releases/latest. Miner binary releases: https://github.com/Quantus-Network/quantus-miner/releases/latest.
 
 **Critical architecture:** The node is the QUIC server (listens on port 9833 via `--miner-listen-port`). The external miner is the QUIC client (connects via `--node-addr`). Start the node first, wait for it to log that the miner server is listening, then start the miner.
 
@@ -20,7 +20,7 @@ Mining commands and flags are aligned with the official chain wiki (https://gith
 
 Before anything else, confirm the user has:
 
-1. **A Quantus wallet** -- downloaded from https://linktr.ee/quantusnetwork. Used to hold funds and eventually claim mining rewards.
+1. **A Quantus wallet** -- downloaded from https://linktr.ee/quantusnetwork. Used to hold funds and spend mining rewards (the app supports wormhole balances directly).
 2. **A 24-word mnemonic / seed phrase** -- generated in the wallet app (or the CLI). This is the source of the wormhole address that receives rewards.
 
 Use AskUserQuestion to confirm both. If either is missing, pause the flow and direct the user to the wallet download first.
@@ -29,7 +29,7 @@ Use AskUserQuestion to confirm both. If either is missing, pause the flow and di
 
 Before running any commands, explain briefly:
 
-> Mining rewards on Quantus are sent to a **wormhole address**, derived from a 32-byte preimage called the `inner_hash`. Wormhole addresses are privacy-preserving by default. You can later claim rewards out of the wormhole to either another wormhole address or a regular (dilithium) wallet address.
+> Mining rewards on Quantus are sent to a **wormhole address**, derived from a 32-byte preimage called the `inner_hash`. Wormhole addresses are privacy-preserving by default. Rewards accumulate at the wormhole address; the wallet app shows and spends them directly from the wormhole balance.
 
 The `key quantus --scheme wormhole` command outputs three values the user must save:
 
@@ -37,7 +37,7 @@ The `key quantus --scheme wormhole` command outputs three values the user must s
 |-------|---------|----------|
 | **Address** | Wormhole address where rewards accumulate | Save for monitoring / explorer lookups |
 | **inner_hash** | 32-byte preimage | Pass to node via `--rewards-inner-hash` |
-| **Secret** | Private key proving ownership | Back up securely -- loss means loss of rewards |
+| **Secret phrase** | Mnemonic proving ownership | Back up securely -- loss means loss of rewards |
 
 ## Step 3: Configure Mining Resources
 
@@ -104,19 +104,21 @@ Two options -- ask the user which they want via AskUserQuestion:
 
 **Option A -- Derive from existing wallet mnemonic (recommended if they already have a Quantus wallet):**
 ```bash
-./quantus-node key quantus --scheme wormhole --words "24 word mnemonic here in quotes"
+./quantus-node key quantus --scheme wormhole --words
 ```
+`--words` takes no argument: the command reads the 24-word phrase from stdin (interactive prompt without echo on a terminal). **Have the user type their mnemonic into the prompt themselves in their own terminal. Never ask the user to share the mnemonic with you, and never place it in a command line, chat, or file.**
 
 **Option B -- Generate a fresh keypair unrelated to any existing wallet:**
 ```bash
 ./quantus-node key quantus --scheme wormhole
 ```
 
-In both cases, the command outputs the Address, inner_hash, and Secret. Display the output to the user and remind them:
+The two options produce different output:
 
-> **Save all three values securely.** The `Secret` cannot be recovered. Loss of the Secret means loss of all rewards sitting at the wormhole address.
+- **Option A (supplied mnemonic):** outputs `Address` and `Inner Hash` only. The mnemonic is deliberately **not** echoed back -- the user's existing offline backup of their wallet phrase remains the only copy, which is correct.
+- **Option B (fresh keypair):** additionally prints a new `Secret phrase`. Tell the user to write it down and store it in a secure offline backup (or password manager) immediately. **Never save the secret phrase to a file on disk, and never handle it yourself.** A lost secret phrase cannot be recovered -- losing it means losing all rewards at the wormhole address.
 
-Store `INNER_HASH` for the next step. Also suggest the user save all three to a `.env` file with `chmod 600`.
+Store `INNER_HASH` for the next step. It is fine to persist the `Address` and `Inner Hash` in a `chmod 600` `.env` file -- they are not secrets in the way the phrase is (the inner hash is a commitment) -- but the secret phrase never goes in any file.
 
 ## Step 8: Start the Node
 
@@ -187,47 +189,9 @@ Mining begins automatically once the node is synced and the miner is connected.
   ./quantus-node key inspect-node-key --file node_key.p2p
   ```
 
-## Claiming Rewards
+## Rewards
 
-Mining rewards auto-deposit to the wormhole address. To spend them, claim via the `quantus-cli`.
-
-### 1. Download quantus-cli
-
-Grab the latest archive into the same working directory:
-https://github.com/Quantus-Network/quantus-cli/releases/latest
-
-### 2. Extract, make executable, clear macOS quarantine
-
-```bash
-tar -xzf quantus-*-quantus-cli.tar.gz || tar -xzf quantus-cli-*.tar.gz
-mv */quantus ./quantus 2>/dev/null || true
-chmod +x quantus
-xattr -d com.apple.quarantine quantus 2>/dev/null || true
-```
-
-### 3. Import the secret phrase into a wallet named `mining`
-
-Use the **same 24 words** that produced the wormhole address in Step 7.
-
-```bash
-./quantus wallet import --name mining --mnemonic "24 word mnemonic here in quotes"
-```
-
-### 4. Collect mined tokens via public Planck RPC
-
-```bash
-./quantus \
-  --node-url wss://a1-planck.quantus.cat \
-  --verbose --wait-for-transaction \
-  wormhole collect-rewards --wallet mining
-```
-
-Suggest `--dry-run` first to preview:
-```bash
-./quantus \
-  --node-url wss://a1-planck.quantus.cat \
-  wormhole collect-rewards --wallet mining --dry-run
-```
+Mining rewards auto-deposit to the wormhole address. The Quantus wallet app supports wormhole addresses and encrypted accounts: if the user mined with the same seed phrase as their app wallet, rewards appear in the app automatically and are spendable directly from the wormhole balance. There is no separate claiming step -- do not walk the user through quantus-cli claiming; it is obsolete.
 
 ---
 
@@ -244,6 +208,8 @@ Suggest `--dry-run` first to preview:
 | Can't find rewards | Check wormhole Address from Step 7 output or node startup logs; look up on explorer |
 | Machine sluggish | Reduce CPU workers; prefer GPU: `--cpu-workers 0 --gpu-devices 1` |
 | "Long-range attack" on first block | Benign race during sync; resolves on next block |
+| Sync stalls with `Verification failed` errors and 0 peers | Node version out of step with the network -- check https://github.com/Quantus-Network/chain/releases and community announcements for the version the network is running |
+| Blocks "won" while node shows 0 peers / still syncing | Orphan blocks on an isolated fork; they earn nothing. Only mine once the node is at the chain tip |
 | GPU "search exhausted" but no blocks mined | Normal -- difficulty rose or another miner won the race. Miner is working correctly. |
 
 ## Management Commands
@@ -258,11 +224,6 @@ curl -s -H "Content-Type: application/json" \
 curl -s -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"system_health","params":[]}' \
   http://localhost:9944
-```
-
-**Balance via CLI (after `wallet import`):**
-```bash
-./quantus balance --address <WORMHOLE_ADDRESS>
 ```
 
 ## Security Best Practices
@@ -284,6 +245,5 @@ curl -s -H "Content-Type: application/json" \
 - Explorer: https://explorer.quantus.com/
 - Node binary: https://github.com/Quantus-Network/chain/releases/latest
 - Miner binary: https://github.com/Quantus-Network/quantus-miner/releases/latest
-- CLI: https://github.com/Quantus-Network/quantus-cli/releases/latest
 - Telegram: https://t.me/quantusnetwork
 - GitHub Issues: https://github.com/Quantus-Network/chain/issues
