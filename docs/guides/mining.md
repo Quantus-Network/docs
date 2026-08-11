@@ -7,29 +7,27 @@ title: Mining and Running a Node
 
 This guide covers connecting to the Quantus Planck testnet and mining. Works on macOS and Linux (including WSL2 on Windows). 
 
-Use the buttons at the top of this page to copy the full guide as Markdown, or to copy an AI mining skill you can give to an agent like Claude Code to walk you through setup interactively.
+Use the **Copy Context** button at the top of this page to copy everything as Markdown -- the full guide plus an AI mining skill. Paste it to an agent like Claude Code to be walked through setup interactively, or keep it as an offline reference.
 
 ## Prerequisites
 
 Before starting, you will need:
 
-1. **Quantus wallet.** Download the [Quantus wallet](https://linktr.ee/quantusnetwork) to hold funds, send transactions, and eventually claim your mining rewards.
+1. **Quantus wallet.** Download the [Quantus wallet](https://linktr.ee/quantusnetwork) to hold funds, send transactions, and spend your mining rewards.
 
 2. **A mnemonic / seed phrase.** You can create one in the wallet app or in the CLI. 
 
-3. **A wormhole address for rewards.** The chain only accumulates mining rewards to **wormhole addresses** -- not regular wallet addresses. Rewards sitting at a wormhole can later be claimed to either another wormhole address or a dilithium (regular wallet) address. You'll generate your wormhole address in the setup below.
+3. **A wormhole address for rewards.** The chain only accumulates mining rewards to **wormhole addresses** -- not regular wallet addresses. The wallet app supports wormhole addresses and encrypted accounts, so rewards mined to your wormhole address show up in the app and can be spent directly from your wormhole balance -- no separate claiming step. You'll generate your wormhole address in the setup below.
 
 ## Understanding Wormhole Addresses
 
 Mining rewards are sent to a **wormhole address** derived from a 32-byte preimage you generate during setup (aka your inner hash). 
 
-This is privacy-preserving by default. All miners use must claim to wormhole addresses.
+This is privacy-preserving by default. All mining rewards are paid to wormhole addresses.
 
 Wormhole addresses look identical to regular transparent addresses, but they have a separate derivation path. 
 
-**If you already have an existing wallet:** You can derive a wormhole keypair from an existing mnemonic or seed instead of generating a fresh one. This is the recommended approach if you are mining for the first time. 
-
-Currently, our mobile app only supports transparent addresses. So this guide will walk you through mining to a wormhole address and claiming into your transparent address so that you can see your rewards in the app, and use your tokens without depending on the CLI. 
+**If you already have an existing wallet:** You can derive a wormhole keypair from an existing mnemonic or seed instead of generating a fresh one. This is the recommended approach if you are mining for the first time -- use the same seed phrase as your wallet app, and your mining rewards will appear in the app automatically, spendable straight from your wormhole balance.
 
 During setup you will run `key quantus --scheme wormhole`, which outputs three values:
 
@@ -43,7 +41,7 @@ The node derives your wormhole address from the `inner_hash` and logs it on star
 
 The most important thing to back up is your 24 word phrase. 
 
-You shoould keep both your 24 word phrase and your secret secure and do not share either with anyone. 
+You should keep both your 24 word phrase and your secret secure and do not share either with anyone. 
 
 ---
 
@@ -94,7 +92,7 @@ cd ~/quantus-mining/docker && docker compose logs -f
 
 Manage settings with `./quantus-mining.sh config show` or `./quantus-mining.sh config set CPU_WORKERS 4`. Editable keys: `NODE_NAME`, `CPU_WORKERS`, `GPU_DEVICES`, `MINER_LISTEN_PORT`, `CHAIN`. In Docker mode, the script regenerates `docker/.env` on start after config changes.
 
-GPU mining is recommended when available. Mining rewards still accumulate at your wormhole address — see [Claiming Rewards](#claiming-rewards) below to move them to your wallet.
+GPU mining is recommended when available. Mining rewards accumulate at your wormhole address and appear in the wallet app, ready to spend.
 
 Example config template: [mining.conf.example](/scripts/mining.conf.example).
 
@@ -106,11 +104,11 @@ Get the latest `quantus-node` binary for your platform from [GitHub Releases](ht
 
 Download it in your working directory.
 
-You will need to extract it into your working directory. To do this on MacOS simply double click.
+Extract it into your working directory (on macOS, double-clicking the archive works).
 
-Note: That aarch64-apple is for apple silicon chips (M1 and above), and x86-apple is for intel based Macs.
+Note: `aarch64-apple` builds are for Apple Silicon Macs (M1 and above); `x86-apple` is for Intel-based Macs.
 
-Now open your terminal, generat your node key, inner hash, and run the node in this terminal window. 
+Now open your terminal to generate your node key and inner hash, and run the node in this terminal window. 
 
 **macOS only -- fix Gatekeeper permissions:**
 
@@ -128,7 +126,7 @@ chmod u+x quantus-node
 ### 3. Generate Inner Hash
 Copy the 24 word secret phrase from your wallet app.
 
-**Note: Save this secret phrase securely and do not share with anyone. It is used to claim rewards, move funds, and derive any information you need in the future.**
+**Note: Save this secret phrase securely and do not share with anyone. It is used to access your rewards, move funds, and derive any information you need in the future.**
 
 When using the below command, make sure to put your secret words in "quotation marks".
 
@@ -138,47 +136,43 @@ Save the `Inner Hash`:
 ./quantus-node key quantus --scheme wormhole --words "your secret words"
 ```
 
-#### Alternatively, if you'd like to generate a separate wallet address from what you have in your wallet app you can use the command below:
-
+Alternatively, to generate a fresh wallet separate from the one in your wallet app:
 
 ```bash
 ./quantus-node key quantus --scheme wormhole
 ```
 
-COPY the words from the output. That is your secret phrase
+Copy the words from the output -- that is your secret phrase.
 
-**Note: Save this secret phrase securely and do not share with anyone. It is used to claim rewards, move funds, and derive any information you need in the future.**
+**Note: Save this secret phrase securely and do not share with anyone. It is used to access your rewards, move funds, and derive any information you need in the future.**
 
 
 ### 4. Start the Node
-Note: In the below command the following arguments need to change:
 
-`--name`
+Replace the two placeholders before running:
 
-`--rewards-inner-hash`
+- `<YOUR_NODE_NAME>` -- any name you like (this is how your node appears on [telemetry](https://telemetry.quantus.cat/))
+- `<YOUR_INNER_HASH>` -- the `inner_hash` value from step 3
 
-Input any desired node name.
-
-`node_key.p2p` file should be the same as default below (generated in step 2 above).
-
-Your `inner-hash` will be displayed from the commands in the above steps.
-
+`node_key.p2p` is the file generated in step 2.
 
 ```bash
 ./quantus-node \
-  --name NAME YOUR NODE HERE \
+  --name <YOUR_NODE_NAME> \
   --validator \
   --miner-listen-port 9833 \
   --chain planck \
   --node-key-file node_key.p2p \
-  --rewards-inner-hash PASTE YOUR INNER HASH HERE \
+  --rewards-inner-hash <YOUR_INNER_HASH> \
   --max-blocks-per-request 64 \
   --sync full
 ```
 #### Note on Syncing
-Once you begin syncing your node, wait until the node is fully synced before you begin mining. 
+Once you begin syncing your node, wait until the node is fully synced before you begin mining. Blocks mined before your node reaches the chain tip are orphans and earn nothing (the miner pauses automatically if your node has no peers).
 
-Depending on your internet speed it may take 5-30 minutes for the node to full sync.
+Sync time grows with the chain: expect anywhere from ~15 minutes to a couple of hours depending on your hardware and connection. Your node is synced when the log switches from `Syncing` to `Idle` at the current tip.
+
+**Run the node version that matches the network.** If your node stalls mid-sync with `Verification failed` errors and drops to 0 peers, your node version is out of step with the network -- check [Releases](https://github.com/Quantus-Network/chain/releases) and community announcements for which version the network is currently running.
 
 ### 5. Start the Miner
 
@@ -192,15 +186,13 @@ Download the miner binary from [Miner Releases](https://github.com/Quantus-Netwo
 xattr -d com.apple.quarantine quantus-miner-macos-aarch64 && chmod u+x quantus-miner-macos-aarch64
 ```
 
-#### Wait for the node logs to show the miner server is listening, then run the following command in a **separate terminal**:
-
-**Note (if not using apple silicon):** Replace "./quantus-miner-macos-aarch64" with the name of your file.
+Wait for the node logs to show the miner server is listening, then run the following command in the **separate terminal** (if not on Apple Silicon, replace `quantus-miner-macos-aarch64` with your platform's binary name):
 
 ```bash
 ./quantus-miner-macos-aarch64 serve --cpu-workers 4 --gpu-devices 0 --node-addr 127.0.0.1:9833
 ```
 
-Depending on your machine and resources you can adjust, `--gpu-devices 0 --cpu-workers 4` to see what provides the best balance of hash rate and system usability.
+Depending on your machine and resources you can adjust `--gpu-devices` and `--cpu-workers` to see what provides the best balance of hash rate and system usability.
 
 The above command is fairly conservative for most modern hardware. 
 
@@ -210,37 +202,11 @@ For example if you want to use your GPU and have many CPU cores available you co
 ./quantus-miner-macos-aarch64 serve --cpu-workers 8 --gpu-devices 1 --node-addr 127.0.0.1:9833
 ```
 
-## Monitoring & Claiming Rewards
+## Monitoring
 
-### **Claiming Rewards**
+### Your Rewards
 
-#### 1. Download quantus-cli
-Download the latest quantus-cli archive into the same directory:
-https://github.com/Quantus-Network/quantus-cli/releases/latest
-
-
-#### 2. Extract, make executable, and clear the macOS quarantine flag:
-
-```bash
-tar -xzf quantus-cli-*.tar.gz --strip-components=1
-chmod +x quantus
-xattr -d com.apple.quarantine quantus
-./quantus --version
-```
-#### 3. Import your secret phrase into a new wallet named mining (use the same words):
-
-```bash
-./quantus wallet import --name mining --mnemonic "YOUR SECRET WORDS"
-```
-
-#### 4. Collect your mined tokens via the public Planck RPC:
-
-```bash
-./quantus \
-  --node-url wss://a1-planck.quantus.cat \
-  --verbose --wait-for-transaction \
-  wormhole collect-rewards --wallet mining
-```
+Rewards accumulate at your wormhole address as you mine. The wallet app supports wormhole addresses and encrypted accounts, so if you mine with the same seed phrase as your app wallet, rewards appear in the app and are spendable directly from your wormhole balance -- there is no separate claiming step.
 
 ### Monitoring Your Node
 - **Telemetry dashboard:** [telemetry.quantus.cat](https://telemetry.quantus.cat/) -- find your node by name
@@ -259,7 +225,7 @@ xattr -d com.apple.quarantine quantus
 tail -f ~/.local/share/quantus-node/chains/planck/network/quantus-node.log
 
 # Or run with verbose logging
-RUST_LOG=info quantus-node [options]
+RUST_LOG=info ./quantus-node [options]
 ```
 
 **Docker (automated setup with `RUN_MODE=docker`):**
@@ -272,7 +238,7 @@ cd ~/quantus-mining/docker && docker compose logs -f
 #### **Inspect your node's P2P identity:**
 
 ```bash
-./quantus-node key inspect-node-key --file ~/.quantus/node_key.p2p
+./quantus-node key inspect-node-key --file node_key.p2p
 ```
 
 ## Security Best Practices
@@ -296,6 +262,4 @@ Planck is testnet software for testing purposes only. Tokens have no monetary va
 
 - **GitHub Issues:** [Report bugs](https://github.com/Quantus-Network/chain/issues)
 - **Telegram:** [Quantus community](https://t.me/quantusnetwork)
-
-
-### FAQ
+- **Research forum:** [research.quantus.com](https://research.quantus.com) -- deeper technical discussion with the Quantus team

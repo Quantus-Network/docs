@@ -117,7 +117,7 @@ RUST_LOG=info ./quantus-miner serve \
 
 GPU mining produces ~500-1000 MH/s vs ~15 MH/s per CPU thread. Multiple miners can connect to the same node simultaneously -- the node broadcasts jobs to all connected miners and the first valid result wins.
 
-For the full QUIC protocol specification, see [External Miner Protocol](./miner-protocol).
+For the full QUIC protocol specification, see [External Miner Protocol](./miner-protocol.md).
 
 **Source:** [quantus-miner](https://github.com/Quantus-Network/quantus-miner)
 

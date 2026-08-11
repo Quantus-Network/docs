@@ -54,7 +54,7 @@ The 70x size increase from ECDSA to Dilithium is the core challenge:
 | Public Key | ~33 bytes | ~2,592 bytes |
 | Per-transaction overhead | ~98 bytes | ~7,219 bytes |
 
-This is why Quantus uses [Wormhole addresses with ZK proof aggregation](./wormhole) to compress thousands of transactions into a single proof.
+This is why Quantus uses [Wormhole addresses with ZK proof aggregation](./wormhole.md) to compress thousands of transactions into a single proof.
 
 ## ML-KEM-768 (Kyber) -- P2P Encryption
 

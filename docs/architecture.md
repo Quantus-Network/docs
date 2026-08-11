@@ -177,7 +177,7 @@ flowchart LR
 
 ## Next Steps
 
-- **[Post-Quantum Cryptography](./deep-dives/pqc):** How Dilithium, Kyber, and HD-Lattice wallets work
-- **[QPoW Consensus & Mining](./deep-dives/qpow):** The mining algorithm and difficulty adjustment
-- **[Wormhole & ZK Scaling](./deep-dives/wormhole):** How ZK proofs solve the signature bloat problem
-- **[User Safety Features](./deep-dives/safety):** Reversible transfers, guardians, and recovery
+- **[Post-Quantum Cryptography](./deep-dives/pqc.md):** How Dilithium, Kyber, and HD-Lattice wallets work
+- **[QPoW Consensus & Mining](./deep-dives/qpow.md):** The mining algorithm and difficulty adjustment
+- **[Wormhole & ZK Scaling](./deep-dives/wormhole.md):** How ZK proofs solve the signature bloat problem
+- **[User Safety Features](./deep-dives/safety.md):** Reversible transfers, guardians, and recovery
