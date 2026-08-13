@@ -192,11 +192,22 @@ classify_miner_protocol() {
 }
 
 detect_binary_miner_protocol() {
-  local node_help miner_help
+  local node_help miner_help node_status miner_status
   [ -x "$NODE_BIN" ] || die "quantus-node not found at ${NODE_BIN}"
   [ -x "$MINER_BIN" ] || die "quantus-miner not found at ${MINER_BIN}"
-  node_help="$("$NODE_BIN" --help 2>&1 || true)"
-  miner_help="$("$MINER_BIN" serve --help 2>&1 || true)"
+
+  node_help="$("$NODE_BIN" --help 2>&1)" && node_status=0 || node_status=$?
+  if [ "$node_status" -ne 0 ]; then
+    die "Failed to probe quantus-node --help (exit ${node_status}).
+${node_help}"
+  fi
+
+  miner_help="$("$MINER_BIN" serve --help 2>&1)" && miner_status=0 || miner_status=$?
+  if [ "$miner_status" -ne 0 ]; then
+    die "Failed to probe quantus-miner serve --help (exit ${miner_status}).
+${miner_help}"
+  fi
+
   classify_miner_protocol "$node_help" "$miner_help"
 }
 
