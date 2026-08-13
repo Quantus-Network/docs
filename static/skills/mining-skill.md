@@ -20,19 +20,21 @@ Mining commands and flags are aligned with chain MINING.md (https://github.com/Q
 
 Capture `--help` exit status first. A non-zero exit is a broken, quarantined, or wrong-architecture binary -- **stop** and fix it. Do **not** treat a failed probe as pre-auth (`*_auth=no`). Do not pipe `--help` into `grep` until the command itself exits 0.
 
+Run the snippet as a script (`bash probe-miner-protocol.sh`), not by pasting it into an interactive shell.
+
 ```bash
 node_help="$(./quantus-node --help 2>&1)" && node_status=0 || node_status=$?
 if [ "$node_status" -ne 0 ]; then
-  echo "quantus-node --help failed (exit ${node_status}). STOP. Do not classify as pre-auth."
-  printf '%s\n' "$node_help"
-  # abort setup — do not continue
+  echo "quantus-node --help failed (exit ${node_status}). STOP. Do not classify as pre-auth." >&2
+  printf '%s\n' "$node_help" >&2
+  exit 1
 fi
 
 miner_help="$(./quantus-miner serve --help 2>&1)" && miner_status=0 || miner_status=$?
 if [ "$miner_status" -ne 0 ]; then
-  echo "quantus-miner serve --help failed (exit ${miner_status}). STOP. Do not classify as pre-auth."
-  printf '%s\n' "$miner_help"
-  # abort setup — do not continue
+  echo "quantus-miner serve --help failed (exit ${miner_status}). STOP. Do not classify as pre-auth." >&2
+  printf '%s\n' "$miner_help" >&2
+  exit 1
 fi
 
 printf '%s' "$node_help" | grep -q -- miner-auth-token-file && node_auth=yes || node_auth=no
@@ -45,7 +47,7 @@ fi
 echo "node_auth=${node_auth} miner_auth=${miner_auth}"
 ```
 
-Replace `./quantus-node` / `./quantus-miner` with the actual downloaded filenames. `/usr/bin/false` (or any failed `--help`) must abort here, not print `node_auth=no`.
+Replace `./quantus-node` / `./quantus-miner` with the actual downloaded filenames. `/usr/bin/false` (or any failed `--help`) must exit 1 here and must not print `node_auth=no`.
 
 - **Both no, after successful `--help` (today's latest):** wait only for "miner server listening"; start the miner with `--node-addr` only.
 - **Both yes:** wait for `miner-auth-token` and `miner-tls-cert-sha256` under the chain directory, then pass `--auth-token-file` and `--tls-cert-sha256-file`. ALPN is `quantus-miner/2`.
