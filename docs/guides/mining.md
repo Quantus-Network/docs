@@ -67,7 +67,7 @@ The script generates your wormhole inner hash, node identity, and a config file 
 
 **Binary mode** downloads `quantus-node` and `quantus-miner` into `~/quantus-mining/bin/`.
 
-**Docker mode** requires Docker Desktop (or Docker Engine) with Compose v2 (`docker compose`) and a running daemon. It pulls `ghcr.io/quantus-network/quantus-node` and `ghcr.io/quantus-network/quantus-miner` (release tags from GitHub) and installs a compose stack under `~/quantus-mining/docker/` (`docker-compose.yml`, `init-node.sh`, node keys, and chain data).
+**Docker mode** requires Docker Desktop (or Docker Engine) with Compose v2 (`docker compose`) and a running daemon. It pulls `ghcr.io/quantus-network/quantus-node` and `ghcr.io/quantus-network/quantus-miner` (release tags from GitHub) and installs a compose stack under `~/quantus-mining/docker/` (`docker-compose.yml`, `init-node.sh`, `init-miner.sh`, node keys, and chain data). The miner waits for the node's `miner-auth-token` and `miner-tls-cert-sha256` before connecting.
 
 **Linux ARM64:** there is no native `quantus-miner` release for Linux ARM64. Use `--mode docker` or an x86_64 host.
 
@@ -93,6 +93,8 @@ cd ~/quantus-mining/docker && docker compose logs -f
 Manage settings with `./quantus-mining.sh config show` or `./quantus-mining.sh config set CPU_WORKERS 4`. Editable keys: `NODE_NAME`, `CPU_WORKERS`, `GPU_DEVICES`, `MINER_LISTEN_PORT`, `CHAIN`. In Docker mode, the script regenerates `docker/.env` on start after config changes.
 
 GPU mining is recommended when available. Mining rewards accumulate at your wormhole address and appear in the wallet app, ready to spend.
+
+The script wires miner authentication automatically: after the node starts it reads `miner-auth-token` and `miner-tls-cert-sha256` from the node's chain directory and passes them to the miner. You do not need to copy those values by hand.
 
 Example config template: [mining.conf.example](/scripts/mining.conf.example).
 
@@ -174,9 +176,27 @@ Sync time grows with the chain: expect anywhere from ~15 minutes to a couple of 
 
 **Run the node version that matches the network.** If your node stalls mid-sync with `Verification failed` errors and drops to 0 peers, your node version is out of step with the network -- check [Releases](https://github.com/Quantus-Network/chain/releases) and community announcements for which version the network is currently running.
 
+On first start with `--miner-listen-port`, the node writes miner auth material under the chain directory (token is **not** logged -- read the file):
+
+| File | Purpose |
+|------|---------|
+| `miner-auth-token` | Shared secret the miner sends in `Ready`. Mode `0600`. Never put this on the command line or in logs. |
+| `miner-tls-cert-sha256` | SHA-256 of the miner QUIC cert. Miners must pin this. Also printed in node logs. |
+| `miner-tls-cert.der` / `miner-tls-key.der` | Node TLS material (do not copy the private key to miners). |
+
+Default chain directory:
+
+| Platform | Path |
+|----------|------|
+| Linux | `~/.local/share/quantus-node/chains/planck/` |
+| macOS | `~/Library/Application Support/quantus-node/chains/planck/` |
+| Docker (this guide's stack) | `~/quantus-mining/docker/node-data/chains/planck/` |
+
+Wait until logs show the miner server is listening (and the auth/TLS file paths) before starting the miner. If miner-server startup fails, the node exits -- it does not fall back to local mining.
+
 ### 5. Start the Miner
 
-Download the miner binary from [Miner Releases](https://github.com/Quantus-Network/quantus-miner/releases/latest).
+Download the miner binary from [Miner Releases](https://github.com/Quantus-Network/quantus-miner/releases/latest). Node and miner versions must match: the wire protocol ALPN is `quantus-miner/2`. A mismatched pair fails at TLS handshake with "no application protocol".
 
 **Open a new terminal window (cmd + t). Let the node run in the original terminal.**
 
@@ -186,11 +206,18 @@ Download the miner binary from [Miner Releases](https://github.com/Quantus-Netwo
 xattr -d com.apple.quarantine quantus-miner-macos-aarch64 && chmod u+x quantus-miner-macos-aarch64
 ```
 
-Wait for the node logs to show the miner server is listening, then run the following command in the **separate terminal** (if not on Apple Silicon, replace `quantus-miner-macos-aarch64` with your platform's binary name):
+Wait for the node logs to show the miner server is listening, then run the following command in the **separate terminal** (if not on Apple Silicon, replace `quantus-miner-macos-aarch64` with your platform's binary name). Replace `<CHAIN_DIR>` with the chain directory from the table above:
 
 ```bash
-./quantus-miner-macos-aarch64 serve --cpu-workers 4 --gpu-devices 0 --node-addr 127.0.0.1:9833
+./quantus-miner-macos-aarch64 serve \
+  --cpu-workers 4 \
+  --gpu-devices 0 \
+  --node-addr 127.0.0.1:9833 \
+  --auth-token-file <CHAIN_DIR>/miner-auth-token \
+  --tls-cert-sha256-file <CHAIN_DIR>/miner-tls-cert-sha256
 ```
+
+Prefer `--auth-token-file` / `--tls-cert-sha256-file` over inline `--auth-token` / `--tls-cert-sha256` so the secret is not stored in shell history. Both flags are required; a wrong token or TLS pin is a permanent error (the miner will not reconnect-loop).
 
 Depending on your machine and resources you can adjust `--gpu-devices` and `--cpu-workers` to see what provides the best balance of hash rate and system usability.
 
@@ -199,8 +226,15 @@ The above command is fairly conservative for most modern hardware.
 For example if you want to use your GPU and have many CPU cores available you could run
 
 ```bash
-./quantus-miner-macos-aarch64 serve --cpu-workers 8 --gpu-devices 1 --node-addr 127.0.0.1:9833
+./quantus-miner-macos-aarch64 serve \
+  --cpu-workers 8 \
+  --gpu-devices 1 \
+  --node-addr 127.0.0.1:9833 \
+  --auth-token-file <CHAIN_DIR>/miner-auth-token \
+  --tls-cert-sha256-file <CHAIN_DIR>/miner-tls-cert-sha256
 ```
+
+If the miner exits immediately, it is usually auth or version mismatch: confirm both files exist, that you waited for the miner server to listen, and that node and miner releases match (`quantus-miner/2`). A wrong token or TLS pin is a permanent error -- re-read the files (the token is never logged).
 
 ## Monitoring
 
@@ -221,8 +255,11 @@ Rewards accumulate at your wormhole address as you mine. The wallet app supports
 **Binary / manual install:**
 
 ```bash
-# Real-time logs
+# Linux
 tail -f ~/.local/share/quantus-node/chains/planck/network/quantus-node.log
+
+# macOS
+tail -f ~/Library/Application\ Support/quantus-node/chains/planck/network/quantus-node.log
 
 # Or run with verbose logging
 RUST_LOG=info ./quantus-node [options]
@@ -249,8 +286,10 @@ cd ~/quantus-mining/docker && docker compose logs -f
 
 ### Node Security
 
-- **Firewall:** Only expose port 30333 (P2P). Keep 9833 (miner), 9944 (RPC), and 9615 (metrics) on localhost.
-- **Updates:** Check [GitHub Releases](https://github.com/Quantus-Network/chain/releases/latest) for new versions regularly
+- **Firewall:** Only expose port 30333 (P2P). Keep 9833/UDP (miner), 9944 (RPC), and 9615 (metrics) on localhost. The miner port binds `0.0.0.0` -- reachability is entirely your firewall. Auth + TLS pinning do **not** make it safe to publish to the internet.
+- **Miner secrets:** Treat `miner-auth-token` like a password. Back it up with the same care as other node files; anyone with the token and network access to port 9833 can submit job results and observe mining jobs.
+- **Remote miners:** Put node and miners on a private network or VPN (WireGuard, Tailscale, VPC). Do not open 9833/UDP to `0.0.0.0/0`.
+- **Updates:** Check [GitHub Releases](https://github.com/Quantus-Network/chain/releases/latest) for new versions regularly. Node and miner must ship the same miner protocol (`quantus-miner/2`).
 - **Monitoring:** Watch for unusual peer counts, sync stalls, or dropped miner connections
 
 ### Testnet Disclaimer

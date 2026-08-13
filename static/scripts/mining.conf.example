@@ -24,6 +24,8 @@ NODE_KEY_FILE="node_key.p2p"
 CHAIN="planck"
 
 # QUIC miner server port (node listens; miner connects via --node-addr)
+# Auth files live in the node's chain dir (not this file):
+#   miner-auth-token, miner-tls-cert-sha256
 MINER_LISTEN_PORT=9833
 
 # External miner resource allocation

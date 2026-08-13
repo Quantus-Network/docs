@@ -37,7 +37,7 @@ readonly MINER_REPO="Quantus-Network/quantus-miner"
 readonly NODE_IMAGE="ghcr.io/quantus-network/quantus-node"
 readonly MINER_IMAGE="ghcr.io/quantus-network/quantus-miner"
 readonly DEFAULT_SCRIPTS_BASE="https://docs.quantus.com/scripts"
-readonly DOCKER_STACK_FILES="docker-compose.yml init-node.sh"
+readonly DOCKER_STACK_FILES="docker-compose.yml init-node.sh init-miner.sh"
 readonly EDITABLE_KEYS="NODE_NAME CPU_WORKERS GPU_DEVICES MINER_LISTEN_PORT CHAIN"
 
 DOCKER_COMPOSE=""
@@ -270,7 +270,7 @@ install_docker_stack() {
     fi
   done
 
-  chmod +x "${docker_dir}/init-node.sh"
+  chmod +x "${docker_dir}/init-node.sh" "${docker_dir}/init-miner.sh"
   info "Docker stack files ready in ${docker_dir}"
 }
 
@@ -740,6 +740,53 @@ port_listening() {
   return 1
 }
 
+# Substrate default data dir for quantus-node (chain-scoped files live under chains/<chain>/).
+node_data_path() {
+  if [ -n "${QUANTUS_NODE_DATA_PATH:-}" ]; then
+    printf '%s' "$QUANTUS_NODE_DATA_PATH"
+    return
+  fi
+  case "$(uname -s)" in
+    Darwin)
+      printf '%s/Library/Application Support/quantus-node' "$HOME"
+      ;;
+    *)
+      printf '%s/quantus-node' "${XDG_DATA_HOME:-$HOME/.local/share}"
+      ;;
+  esac
+}
+
+node_chain_dir() {
+  printf '%s/chains/%s' "$(node_data_path)" "${CHAIN:-planck}"
+}
+
+miner_auth_token_path() {
+  printf '%s/miner-auth-token' "$(node_chain_dir)"
+}
+
+miner_tls_pin_path() {
+  printf '%s/miner-tls-cert-sha256' "$(node_chain_dir)"
+}
+
+wait_for_miner_auth_files() {
+  local token_file pin_file timeout="${1:-120}" i
+  token_file="$(miner_auth_token_path)"
+  pin_file="$(miner_tls_pin_path)"
+
+  info "Waiting for miner auth files (up to ${timeout}s)..."
+  for i in $(seq 1 "$timeout"); do
+    if [ -s "$token_file" ] && [ -s "$pin_file" ]; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  die "Timed out waiting for miner auth files:
+  ${token_file}
+  ${pin_file}
+Start the node first and wait until it is listening."
+}
+
 wait_for_miner_server() {
   local port="$1"
   local log_file="${2:-}"
@@ -860,8 +907,9 @@ Editable config keys: ${EDITABLE_KEYS}
 
 Environment:
   QUANTUS_MINING_DIR        Override default working directory (${DEFAULT_MINING_DIR})
-  QUANTUS_SCRIPTS_BASE      Override URL/path for docker-compose.yml and init-node.sh
+  QUANTUS_SCRIPTS_BASE      Override URL/path for docker-compose.yml, init-node.sh, init-miner.sh
                             (default: script directory, else ${DEFAULT_SCRIPTS_BASE})
+  QUANTUS_NODE_DATA_PATH    Override node data directory (default: Substrate quantus-node path)
 EOF
 }
 
@@ -1025,10 +1073,18 @@ run_quantus_node() {
 }
 
 run_quantus_miner() {
+  local token_file pin_file
+  token_file="$(miner_auth_token_path)"
+  pin_file="$(miner_tls_pin_path)"
+  [ -s "$token_file" ] || die "Miner auth token not found at ${token_file}. Start the node first and wait until it is listening."
+  [ -s "$pin_file" ] || die "Miner TLS pin not found at ${pin_file}. Start the node first and wait until it is listening."
+
   "$MINER_BIN" serve \
     --cpu-workers "$CPU_WORKERS" \
     --gpu-devices "$GPU_DEVICES" \
-    --node-addr "127.0.0.1:${MINER_LISTEN_PORT}"
+    --node-addr "127.0.0.1:${MINER_LISTEN_PORT}" \
+    --auth-token-file "$token_file" \
+    --tls-cert-sha256-file "$pin_file"
 }
 
 start_miner_background() {
@@ -1164,6 +1220,7 @@ cmd_start() {
     info "Node started (PID $(cat "$NODE_PID_FILE")). Log: ${node_log}"
 
     wait_for_miner_server "$MINER_LISTEN_PORT" "$node_log" 120
+    wait_for_miner_auth_files 30
 
     start_miner_background "$miner_log"
     echo $MINER_BG_PID > "$MINER_PID_FILE"
@@ -1206,6 +1263,7 @@ cmd_start() {
   tail_pid=$!
 
   wait_for_miner_server "$MINER_LISTEN_PORT" "$node_log" 120
+  wait_for_miner_auth_files 30
 
   start_miner_background "$miner_log"
   miner_pid=$MINER_BG_PID

@@ -12,9 +12,9 @@ This skill mirrors the public mining guide at https://docs.quantus.com/guides/mi
 
 ## Source of Truth
 
-Mining commands and flags are aligned with the official chain wiki (https://github.com/Quantus-Network/chain/wiki). Node binary releases: https://github.com/Quantus-Network/chain/releases/latest. Miner binary releases: https://github.com/Quantus-Network/quantus-miner/releases/latest.
+Mining commands and flags are aligned with chain MINING.md (https://github.com/Quantus-Network/chain/blob/main/MINING.md). Node binary releases: https://github.com/Quantus-Network/chain/releases/latest. Miner binary releases: https://github.com/Quantus-Network/quantus-miner/releases/latest.
 
-**Critical architecture:** The node is the QUIC server (listens on port 9833 via `--miner-listen-port`). The external miner is the QUIC client (connects via `--node-addr`). Start the node first, wait for it to log that the miner server is listening, then start the miner.
+**Critical architecture:** The node is the QUIC server (listens on port 9833 via `--miner-listen-port`). The external miner is the QUIC client (connects via `--node-addr`). Start the node first, wait for it to log that the miner server is listening **and** that it wrote `miner-auth-token` / `miner-tls-cert-sha256`, then start the miner with those files. ALPN is `quantus-miner/2` -- node and miner versions must match.
 
 ## Step 1: Prerequisites Check
 
@@ -138,7 +138,12 @@ Ask the user for a node name (any string -- shows up on telemetry).
 
 Replace `<NODE_NAME>` and `<INNER_HASH>`. The node runs in the foreground; suggest running in a tmux/screen session, or with `nohup ... > node.log 2>&1 &` if the user wants it backgrounded.
 
-Wait for the node logs to show that the miner server is listening on port 9833 before proceeding.
+Wait for the node logs to show that the miner server is listening on port 9833 before proceeding. Also note the logged paths for `miner-auth-token` (token itself is **not** logged -- read the file) and `miner-tls-cert-sha256`. Default chain directory:
+
+- Linux: `~/.local/share/quantus-node/chains/planck/`
+- macOS: `~/Library/Application Support/quantus-node/chains/planck/`
+
+Store as `CHAIN_DIR` for the miner command. **Never ask the user to paste the auth token into chat.** Point the miner at the files instead.
 
 ## Step 9: Download and Start the External Miner
 
@@ -153,13 +158,17 @@ chmod u+x quantus-miner-macos-aarch64
 
 (Replace the filename with the one matching the user's platform.)
 
-Start the miner with the resource settings from Step 3:
+Start the miner with the resource settings from Step 3. Both auth flags are required:
 ```bash
 ./quantus-miner-macos-aarch64 serve \
   --cpu-workers <CPU_WORKERS> \
   --gpu-devices <GPU_DEVICES> \
-  --node-addr 127.0.0.1:9833
+  --node-addr 127.0.0.1:9833 \
+  --auth-token-file <CHAIN_DIR>/miner-auth-token \
+  --tls-cert-sha256-file <CHAIN_DIR>/miner-tls-cert-sha256
 ```
+
+Prefer file flags over `--auth-token` / `--tls-cert-sha256` so the secret is not in shell history. A wrong token or TLS pin is a permanent error -- do not retry-loop; fix the paths.
 
 The miner will connect to the node over QUIC and begin mining once the node finishes syncing.
 
@@ -182,7 +191,10 @@ Mining begins automatically once the node is synced and the miner is connected.
 - **Explorer:** https://explorer.quantus.com/ -- search by wormhole SS58 address.
 - **Real-time node log:**
   ```bash
+  # Linux
   tail -f ~/.local/share/quantus-node/chains/planck/network/quantus-node.log
+  # macOS
+  tail -f ~/Library/Application\ Support/quantus-node/chains/planck/network/quantus-node.log
   ```
 - **Inspect P2P identity:**
   ```bash
@@ -203,7 +215,9 @@ Mining rewards auto-deposit to the wormhole address. The Quantus wallet app supp
 | Port 30333 in use | Add `--port 30334` (or stop the conflicting process) |
 | Not mining | Confirm `--validator` and `--rewards-inner-hash` are set; confirm miner connected |
 | Miner can't connect | Start the node first; wait for "Miner server listening on port 9833" before launching the miner |
-| Miner fails immediately | `--node-addr` is required (QUIC protocol). Ensure node is already running. |
+| Miner fails immediately | `--auth-token-file` and `--tls-cert-sha256-file` are required. Confirm both files exist under `CHAIN_DIR`. A wrong token/pin or ALPN mismatch (`quantus-miner/2`) is permanent -- fix config, do not reconnect-loop. |
+| "no application protocol" | Node/miner version mismatch (ALPN). Use matching releases. |
+| Auth rejected | Token file does not match the node's `miner-auth-token`. Re-read the file; do not take the token from logs (it is never logged). |
 | Database corruption | `./quantus-node purge-chain --chain planck` |
 | Can't find rewards | Check wormhole Address from Step 7 output or node startup logs; look up on explorer |
 | Machine sluggish | Reduce CPU workers; prefer GPU: `--cpu-workers 0 --gpu-devices 1` |
@@ -229,7 +243,8 @@ curl -s -H "Content-Type: application/json" \
 ## Security Best Practices
 
 - **Back up the 24-word seed phrase and Secret** -- offline, ideally in two physical locations. Loss is irrecoverable.
-- **Firewall:** expose only port 30333 (P2P). Keep 9833 (miner), 9944 (RPC), and 9615 (metrics) on localhost.
+- **Firewall:** expose only port 30333 (P2P). Keep 9833/UDP (miner), 9944 (RPC), and 9615 (metrics) on localhost. Miner auth + TLS pinning do **not** make 9833 safe to publish. For remote miners, use a VPN/private network.
+- **Miner secrets:** treat `miner-auth-token` like a password. Never paste it into chat, command lines, or tickets.
 - **Updates:** watch https://github.com/Quantus-Network/chain/releases/latest for new versions; Planck is active testnet and may reset or have breaking changes.
 - **Testnet disclaimer:** PLK tokens have no monetary value. The network may be reset periodically.
 
@@ -238,7 +253,7 @@ curl -s -H "Content-Type: application/json" \
 - Chain: Planck testnet
 - Block time: ~6 seconds
 - Consensus: QPoW (Poseidon2)
-- Miner protocol: QUIC (node is server on port 9833; miner is client via `--node-addr`)
+- Miner protocol: QUIC `quantus-miner/2` (node is server on port 9833; miner is client via `--node-addr` + `--auth-token-file` + `--tls-cert-sha256-file`)
 - Token: PLK (12 decimals)
 - Block reward: ~0.555 PLK total (~0.39 PLK miner share, rest to treasury)
 - Telemetry: https://telemetry.quantus.cat/
