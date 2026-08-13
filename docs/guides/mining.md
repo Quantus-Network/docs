@@ -62,6 +62,8 @@ The script checks the downloaded pair's `--help` output and only passes auth/TLS
 
 **Linux ARM64:** there is no native `quantus-miner` release. Mine from macOS or Linux x86_64.
 
+If an older installer created a Docker stack under `~/quantus-mining/docker/`, `./quantus-mining.sh stop` and `uninstall` still shut it down. New Docker setup is not supported (`setup --mode docker` is rejected). After stopping, migrate with `./quantus-mining.sh setup --force`.
+
 ### Running the stack
 
 **One terminal:** `./quantus-mining.sh start`

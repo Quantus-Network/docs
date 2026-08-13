@@ -14,7 +14,18 @@ This skill mirrors the public mining guide at https://docs.quantus.com/guides/mi
 
 Mining commands and flags are aligned with chain MINING.md (https://github.com/Quantus-Network/chain/blob/main/MINING.md). Node binary releases: https://github.com/Quantus-Network/chain/releases/latest. Miner binary releases: https://github.com/Quantus-Network/quantus-miner/releases/latest.
 
-**Critical architecture:** The node is the QUIC server (listens on port 9833 via `--miner-listen-port`). The external miner is the QUIC client (connects via `--node-addr`). Start the node first, wait for it to log that the miner server is listening **and** that it wrote `miner-auth-token` / `miner-tls-cert-sha256`, then start the miner with those files. ALPN is `quantus-miner/2` -- node and miner versions must match.
+**Critical architecture:** The node is the QUIC server (listens on port 9833 via `--miner-listen-port`). The external miner is the QUIC client (connects via `--node-addr`). Start the node first; wait for it to log that the miner server is listening before starting the miner. Node and miner versions must be a matching pair.
+
+**Miner protocol -- probe the binaries you actually downloaded.** Current GitHub `releases/latest` are pre-auth (node `v0.9.0-endless-sky`, miner `v3.3.1`). Do **not** wait for `miner-auth-token` or pass `--auth-token-file` unless **both** binaries advertise those flags:
+
+```bash
+<quantus-node> --help | grep -q -- miner-auth-token-file && echo node_auth=yes || echo node_auth=no
+<quantus-miner> serve --help | grep -q -- auth-token-file && <quantus-miner> serve --help | grep -q -- tls-cert-sha256-file && echo miner_auth=yes || echo miner_auth=no
+```
+
+- **Both no (today's latest):** wait only for "miner server listening"; start the miner with `--node-addr` only.
+- **Both yes:** wait for `miner-auth-token` and `miner-tls-cert-sha256` under the chain directory, then pass `--auth-token-file` and `--tls-cert-sha256-file`. ALPN is `quantus-miner/2`.
+- **Mixed:** stop. Pin a matching pair (`NODE_VERSION` / `MINER_VERSION`); do not mix independent `releases/latest` tags.
 
 ## Step 1: Prerequisites Check
 
@@ -138,12 +149,12 @@ Ask the user for a node name (any string -- shows up on telemetry).
 
 Replace `<NODE_NAME>` and `<INNER_HASH>`. The node runs in the foreground; suggest running in a tmux/screen session, or with `nohup ... > node.log 2>&1 &` if the user wants it backgrounded.
 
-Wait for the node logs to show that the miner server is listening on port 9833 before proceeding. Also note the logged paths for `miner-auth-token` (token itself is **not** logged -- read the file) and `miner-tls-cert-sha256`. Default chain directory:
+Wait for the node logs to show that the miner server is listening on port 9833 before proceeding. Default chain directory:
 
 - Linux: `~/.local/share/quantus-node/chains/planck/`
 - macOS: `~/Library/Application Support/quantus-node/chains/planck/`
 
-Store as a quoted `CHAIN_DIR` for the miner command (required on macOS — the path contains a space). **Never ask the user to paste the auth token into chat.** Point the miner at the files instead.
+Store as a quoted `CHAIN_DIR` (required on macOS — the path contains a space):
 
 ```bash
 # Darwin
@@ -151,6 +162,8 @@ CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
 # Linux
 # CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
 ```
+
+If the protocol probe in Source of Truth was **both yes**, also wait until `miner-auth-token` and `miner-tls-cert-sha256` exist under `CHAIN_DIR`. The token itself is **not** logged -- read the file. **Never ask the user to paste the auth token into chat.** If the probe was **both no**, do not wait for those files; they will not be created.
 
 ## Step 9: Download and Start the External Miner
 
@@ -165,7 +178,17 @@ chmod u+x quantus-miner-macos-aarch64
 
 (Replace the filename with the one matching the user's platform.)
 
-Start the miner with the resource settings from Step 3. Both auth flags are required when the node/miner pair supports miner QUIC auth. Always quote `"$CHAIN_DIR/..."`:
+Start the miner with the resource settings from Step 3. Always quote `"$CHAIN_DIR/..."` when using auth files.
+
+**Pre-auth pair (current latest -- omit auth flags):**
+```bash
+./quantus-miner-macos-aarch64 serve \
+  --cpu-workers <CPU_WORKERS> \
+  --gpu-devices <GPU_DEVICES> \
+  --node-addr 127.0.0.1:9833
+```
+
+**Auth pair (both `--help` probes yes):**
 ```bash
 CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
 # Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
@@ -178,7 +201,7 @@ CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
   --tls-cert-sha256-file "$CHAIN_DIR/miner-tls-cert-sha256"
 ```
 
-Prefer file flags over `--auth-token` / `--tls-cert-sha256` so the secret is not in shell history. A wrong token or TLS pin is a permanent error -- do not retry-loop; fix the paths.
+Prefer file flags over `--auth-token` / `--tls-cert-sha256` so the secret is not in shell history. On an auth pair, a wrong token or TLS pin is a permanent error -- do not retry-loop; fix the paths. On a pre-auth pair, extra auth flags are unknown arguments and the miner will exit immediately.
 
 The miner will connect to the node over QUIC and begin mining once the node finishes syncing.
 
@@ -225,7 +248,7 @@ Mining rewards auto-deposit to the wormhole address. The Quantus wallet app supp
 | Port 30333 in use | Add `--port 30334` (or stop the conflicting process) |
 | Not mining | Confirm `--validator` and `--rewards-inner-hash` are set; confirm miner connected |
 | Miner can't connect | Start the node first; wait for "Miner server listening on port 9833" before launching the miner |
-| Miner fails immediately | `--auth-token-file` and `--tls-cert-sha256-file` are required. Confirm both files exist under `CHAIN_DIR`. A wrong token/pin or ALPN mismatch (`quantus-miner/2`) is permanent -- fix config, do not reconnect-loop. |
+| Miner fails immediately | If the pair is pre-auth, drop `--auth-token-file` / `--tls-cert-sha256-file`. If it is an auth pair, both flags are required and both files must exist under `CHAIN_DIR`. A wrong token/pin or ALPN mismatch (`quantus-miner/2`) is permanent -- fix config, do not reconnect-loop. |
 | "no application protocol" | Node/miner version mismatch (ALPN). Use matching releases. |
 | Auth rejected | Token file does not match the node's `miner-auth-token`. Re-read the file; do not take the token from logs (it is never logged). |
 | Database corruption | `./quantus-node purge-chain --chain planck` |
@@ -263,7 +286,7 @@ curl -s -H "Content-Type: application/json" \
 - Chain: Planck testnet
 - Block time: ~6 seconds
 - Consensus: QPoW (Poseidon2)
-- Miner protocol: QUIC `quantus-miner/2` (node is server on port 9833; miner is client via `--node-addr` + `--auth-token-file` + `--tls-cert-sha256-file`)
+- Miner protocol: QUIC. Pre-auth latest releases use `--node-addr` only. Auth pairs (`quantus-miner/2`) also require `--auth-token-file` and `--tls-cert-sha256-file`. Probe `--help` before choosing.
 - Token: PLK (12 decimals)
 - Block reward: ~0.555 PLK total (~0.39 PLK miner share, rest to treasury)
 - Telemetry: https://telemetry.quantus.cat/

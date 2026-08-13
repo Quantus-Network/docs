@@ -40,6 +40,7 @@ OS=""
 ARCH=""
 NODE_TARGET=""
 MINER_ASSET=""
+DOCKER_COMPOSE=""
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -116,6 +117,128 @@ fix_macos_quarantine() {
   if [ "$OS" = "macos" ] && [ -f "$binary" ]; then
     xattr -d com.apple.quarantine "$binary" 2>/dev/null || true
   fi
+}
+
+# Teardown only: new Docker setup is rejected, but stop/uninstall must still
+# shut down stacks created by older installer versions.
+resolve_docker_compose_cmd() {
+  if docker compose version >/dev/null 2>&1; then
+    DOCKER_COMPOSE="docker compose"
+    return 0
+  fi
+  if command -v docker-compose >/dev/null 2>&1; then
+    DOCKER_COMPOSE="docker-compose"
+    return 0
+  fi
+  return 1
+}
+
+require_docker() {
+  require_cmd docker
+  resolve_docker_compose_cmd \
+    || die "Docker Compose not found. Install Docker Desktop or the docker-compose-plugin."
+  docker info >/dev/null 2>&1 || die "Docker daemon is not running. Start Docker and retry."
+}
+
+docker_available() {
+  command -v docker >/dev/null 2>&1 \
+    && resolve_docker_compose_cmd \
+    && docker info >/dev/null 2>&1
+}
+
+docker_stack_dir() {
+  local dir="docker"
+  if [ -f "$CONFIG_FILE" ]; then
+    dir="$(grep -E '^DOCKER_DIR=' "$CONFIG_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)"
+    dir="${dir:-docker}"
+  fi
+  echo "${MINING_DIR}/${dir}"
+}
+
+docker_stack_present() {
+  [ -f "$(docker_stack_dir)/docker-compose.yml" ]
+}
+
+docker_named_containers_running() {
+  local name
+  docker_available || return 1
+  for name in quantus-node quantus-miner; do
+    if docker ps -q -f "name=^/${name}$" 2>/dev/null | grep -q .; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+docker_stack_running() {
+  local docker_dir
+  docker_available || return 1
+  docker_dir="$(docker_stack_dir)"
+  docker_stack_present || return 1
+  (cd "$docker_dir" && ${DOCKER_COMPOSE} ps --status running 2>/dev/null \
+    | grep -qE 'quantus-node|quantus-miner')
+}
+
+legacy_docker_install() {
+  [ "${RUN_MODE:-}" = "docker" ] || docker_stack_present || docker_named_containers_running
+}
+
+stop_named_docker_containers() {
+  local name stopped=false
+  docker_available || return 1
+  for name in quantus-node quantus-miner; do
+    if docker ps -aq -f "name=^/${name}$" 2>/dev/null | grep -q .; then
+      info "Stopping container ${name}..."
+      docker stop "$name" >/dev/null 2>&1 || true
+      docker rm "$name" >/dev/null 2>&1 || true
+      stopped=true
+    fi
+  done
+  [ "$stopped" = true ]
+}
+
+stop_docker_stack() {
+  local best_effort="${1:-false}"
+  local docker_dir stopped=false
+
+  docker_dir="$(docker_stack_dir)"
+
+  if ! docker_stack_present; then
+    if stop_named_docker_containers; then
+      return 0
+    fi
+    [ "$best_effort" = "true" ] && return 1
+    warn "No Docker stack found at ${docker_dir}."
+    return 1
+  fi
+
+  if ! docker_available; then
+    if [ "$best_effort" = "true" ]; then
+      warn "Docker is unavailable; skipping compose shutdown."
+      return 1
+    fi
+    require_docker
+  fi
+
+  info "Stopping leftover Docker mining stack..."
+  if docker_stack_running; then
+    if (cd "$docker_dir" && ${DOCKER_COMPOSE} down --remove-orphans); then
+      stopped=true
+    elif [ "$best_effort" = "true" ]; then
+      warn "docker compose down failed for ${docker_dir}."
+      return 1
+    else
+      return 1
+    fi
+  elif (cd "$docker_dir" && ${DOCKER_COMPOSE} down --remove-orphans 2>/dev/null); then
+    stopped=true
+  elif stop_named_docker_containers; then
+    stopped=true
+  else
+    warn "No running quantus-node or quantus-miner containers found."
+  fi
+
+  [ "$stopped" = true ]
 }
 
 make_executable() {
@@ -411,9 +534,6 @@ load_config() {
   source "$CONFIG_FILE"
 
   RUN_MODE="${RUN_MODE:-binary}"
-  if [ "$RUN_MODE" = "docker" ]; then
-    die "Docker mining is no longer supported. Re-run: ${SCRIPT_NAME} setup --force"
-  fi
   : "${NODE_NAME:?NODE_NAME missing in config}"
   : "${INNER_HASH:?INNER_HASH missing in config}"
   NODE_KEY_FILE="${NODE_KEY_FILE:-node_key.p2p}"
@@ -557,7 +677,8 @@ port_listening() {
   return 1
 }
 
-# Substrate default data dir for quantus-node (chain-scoped files live under chains/<chain>/).
+# Substrate data dir for quantus-node (chain-scoped files live under chains/<id>/).
+# Always passed as --base-path so auth-file lookup matches where the node writes.
 node_data_path() {
   if [ -n "${QUANTUS_NODE_DATA_PATH:-}" ]; then
     printf '%s' "$QUANTUS_NODE_DATA_PATH"
@@ -574,7 +695,41 @@ node_data_path() {
 }
 
 node_chain_dir() {
-  printf '%s/chains/%s' "$(node_data_path)" "${CHAIN:-planck}"
+  local base chain_root expected d
+  local matches=()
+
+  base="$(node_data_path)"
+  chain_root="${base}/chains"
+  expected="${chain_root}/${CHAIN:-planck}"
+
+  if [ -d "$expected" ]; then
+    printf '%s' "$expected"
+    return
+  fi
+
+  if [ -d "$chain_root" ]; then
+    for d in "$chain_root"/*; do
+      [ -d "$d" ] || continue
+      if [ -e "${d}/miner-auth-token" ] || [ -e "${d}/miner-tls-cert-sha256" ]; then
+        matches+=("$d")
+      fi
+    done
+    if [ "${#matches[@]}" -eq 1 ]; then
+      printf '%s' "${matches[0]}"
+      return
+    fi
+    matches=()
+    for d in "$chain_root"/*; do
+      [ -d "$d" ] || continue
+      matches+=("$d")
+    done
+    if [ "${#matches[@]}" -eq 1 ]; then
+      printf '%s' "${matches[0]}"
+      return
+    fi
+  fi
+
+  printf '%s' "$expected"
 }
 
 miner_auth_token_path() {
@@ -592,6 +747,8 @@ wait_for_miner_auth_files() {
 
   info "Waiting for miner auth files (up to ${timeout}s)..."
   for i in $(seq 1 "$timeout"); do
+    token_file="$(miner_auth_token_path)"
+    pin_file="$(miner_tls_pin_path)"
     if [ -s "$token_file" ] && [ -s "$pin_file" ]; then
       return 0
     fi
@@ -633,6 +790,8 @@ detect_run_mode() {
     # shellcheck source=/dev/null
     source "$CONFIG_FILE"
     RUN_MODE="${RUN_MODE:-binary}"
+  elif docker_stack_present; then
+    RUN_MODE="docker"
   fi
 }
 
@@ -640,6 +799,10 @@ mining_stack_running() {
   local node_pid miner_pid
 
   detect_run_mode
+
+  if docker_stack_running || docker_named_containers_running; then
+    return 0
+  fi
 
   node_pid="$(read_pid_file "$NODE_PID_FILE")"
   miner_pid="$(read_pid_file "$MINER_PID_FILE")"
@@ -709,7 +872,7 @@ Editable config keys: ${EDITABLE_KEYS}
 
 Environment:
   QUANTUS_MINING_DIR        Override default working directory (${DEFAULT_MINING_DIR})
-  QUANTUS_NODE_DATA_PATH    Override node data directory (default: Substrate quantus-node path)
+  QUANTUS_NODE_DATA_PATH    Node --base-path (default: Substrate quantus-node data dir)
   NODE_VERSION / MINER_VERSION
                             Pin a matching node/miner release pair (do not mix independent latest tags)
 EOF
@@ -829,6 +992,11 @@ ensure_start_prerequisites() {
   load_config
   ensure_dirs
 
+  if [ "$RUN_MODE" = "docker" ]; then
+    die "Docker mining is no longer supported. Stop the leftover stack with: ${SCRIPT_NAME} stop
+Then re-run: ${SCRIPT_NAME} setup --force"
+  fi
+
   detect_platform
   [ -x "$NODE_BIN" ] || die "quantus-node not found at ${NODE_BIN}. Run: ${SCRIPT_NAME} setup"
   [ -x "$MINER_BIN" ] || die "quantus-miner not found at ${MINER_BIN}. Run: ${SCRIPT_NAME} setup"
@@ -842,6 +1010,7 @@ run_quantus_node() {
   "$NODE_BIN" \
     --name "$NODE_NAME" \
     --validator \
+    --base-path "$(node_data_path)" \
     --miner-listen-port "$MINER_LISTEN_PORT" \
     --chain "$CHAIN" \
     --node-key-file "$START_NODE_KEY" \
@@ -1027,6 +1196,25 @@ cmd_stop() {
   detect_run_mode
   MINER_LISTEN_PORT="${MINER_LISTEN_PORT:-9833}"
 
+  if legacy_docker_install; then
+    if stop_docker_stack true; then
+      stopped=true
+    elif docker_stack_running || docker_named_containers_running; then
+      warn "Could not stop leftover Docker containers. Start Docker and retry, or run:"
+      warn "  cd $(docker_stack_dir) && docker compose down --remove-orphans"
+      warn "  docker stop quantus-node quantus-miner && docker rm quantus-node quantus-miner"
+    fi
+    if [ "$RUN_MODE" = "docker" ]; then
+      clear_pid_files
+      if [ "$stopped" = true ]; then
+        info "Mining stack stopped."
+      else
+        warn "No running Docker mining stack found under $(docker_stack_dir)."
+      fi
+      return 0
+    fi
+  fi
+
   # Miner first, then node.
   if stop_from_pid_file "quantus-miner" "$MINER_PID_FILE" "$MINER_BIN"; then
     stopped=true
@@ -1062,7 +1250,11 @@ cmd_restart() {
 
 cmd_uninstall() {
   local force="false"
-  local chain_data="${HOME}/.local/share/quantus-node"
+  local chain_data
+  local docker_dir
+
+  chain_data="$(node_data_path)"
+  docker_dir="$(docker_stack_dir)"
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -1071,6 +1263,8 @@ cmd_uninstall() {
     esac
     shift
   done
+
+  detect_run_mode
 
   if [ ! -e "$MINING_DIR" ] && ! mining_stack_running; then
     warn "Nothing to uninstall at ${MINING_DIR}."
@@ -1083,6 +1277,9 @@ cmd_uninstall() {
     echo "  - mining.conf (inner hash and wormhole address)"
     echo "  - node_key.p2p"
     echo "  - downloaded binaries and logs"
+    if docker_stack_present || [ "${RUN_MODE:-}" = "docker" ]; then
+      echo "  - leftover Docker stack under ${docker_dir} (compose files, node-keys, node-data)"
+    fi
     echo ""
     warn "Ensure your 24-word seed phrase is backed up before continuing."
     read -r -p "Uninstall Quantus mining setup? (y/N): " confirm
@@ -1092,7 +1289,29 @@ cmd_uninstall() {
     esac
   fi
 
+  if legacy_docker_install; then
+    if ! docker_available; then
+      die "A leftover Docker mining stack was found under ${docker_dir}, but Docker is unavailable.
+Start Docker and retry uninstall so bind-mounted keys/data are not deleted while containers are live.
+Or stop them manually:
+  cd ${docker_dir} && docker compose down --remove-orphans
+  docker stop quantus-node quantus-miner && docker rm quantus-node quantus-miner"
+    fi
+    stop_docker_stack false || true
+    if docker_stack_running || docker_named_containers_running; then
+      die "Could not stop the leftover Docker mining stack. Aborting uninstall.
+  cd ${docker_dir} && docker compose down --remove-orphans
+  docker stop quantus-node quantus-miner && docker rm quantus-node quantus-miner"
+    fi
+  fi
+
   cmd_stop || true
+
+  if docker_stack_running || docker_named_containers_running; then
+    die "Docker mining containers are still running. Aborting uninstall.
+  cd ${docker_dir} && docker compose down --remove-orphans
+  docker stop quantus-node quantus-miner && docker rm quantus-node quantus-miner"
+  fi
 
   if [ -e "$MINING_DIR" ]; then
     info "Removing ${MINING_DIR}..."
