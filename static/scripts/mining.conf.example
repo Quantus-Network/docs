@@ -34,7 +34,9 @@ MINER_LISTEN_PORT=9833
 CPU_WORKERS=0
 GPU_DEVICES=1
 
-# Pinned versions (set automatically during setup from GitHub releases)
+# Pinned versions (set automatically during setup). Must be a matching pair —
+# do not mix independent GitHub latest tags. The setup script verifies both
+# binaries speak the same miner protocol (auth vs legacy).
 # Docker mode: ghcr.io image tags matching those releases.
 NODE_VERSION=""
 MINER_VERSION=""

@@ -220,10 +220,12 @@ quantus-node --validator --chain planck --miner-listen-port 9833
 ### Miner
 
 ```bash
+CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
+# Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
 quantus-miner serve \
   --node-addr 127.0.0.1:9833 \
-  --auth-token-file <BASE_PATH>/chains/<CHAIN>/miner-auth-token \
-  --tls-cert-sha256-file <BASE_PATH>/chains/<CHAIN>/miner-tls-cert-sha256
+  --auth-token-file "$CHAIN_DIR/miner-auth-token" \
+  --tls-cert-sha256-file "$CHAIN_DIR/miner-tls-cert-sha256"
 ```
 
 | Miner Flag | Default | Description |

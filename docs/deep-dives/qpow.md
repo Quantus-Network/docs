@@ -109,15 +109,17 @@ RUST_LOG=info ./quantus-node \
     --miner-listen-port 9833
 
 # In a separate terminal, start the external miner (auth token + TLS pin required)
+CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
+# macOS: CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
 RUST_LOG=info ./quantus-miner serve \
     --node-addr 127.0.0.1:9833 \
-    --auth-token-file ~/.local/share/quantus-node/chains/planck/miner-auth-token \
-    --tls-cert-sha256-file ~/.local/share/quantus-node/chains/planck/miner-tls-cert-sha256 \
+    --auth-token-file "$CHAIN_DIR/miner-auth-token" \
+    --tls-cert-sha256-file "$CHAIN_DIR/miner-tls-cert-sha256" \
     --gpu-devices 1 \
     --cpu-workers 0
 ```
 
-On macOS the chain directory is `~/Library/Application Support/quantus-node/chains/planck/`. The token is not logged -- read `miner-auth-token`. Miners must pin `miner-tls-cert-sha256`. Do not expose port 9833/UDP publicly.
+Quote `CHAIN_DIR` on macOS — `Application Support` contains a space. The token is not logged -- read `miner-auth-token`. Miners must pin `miner-tls-cert-sha256`. Do not expose port 9833/UDP publicly.
 
 GPU mining produces ~500-1000 MH/s vs ~15 MH/s per CPU thread. Multiple miners can connect to the same node simultaneously -- the node broadcasts jobs to all connected miners and the first valid result wins.
 

@@ -65,9 +65,9 @@ The script generates your wormhole inner hash, node identity, and a config file 
 | **Binary** (default) | `./quantus-mining.sh setup` or `setup --mode binary` | macOS; Linux x86_64 |
 | **Docker** | `./quantus-mining.sh setup --mode docker` | Linux ARM64, containerized deploy, or when you prefer not to install binaries locally |
 
-**Binary mode** downloads `quantus-node` and `quantus-miner` into `~/quantus-mining/bin/`.
+**Binary mode** downloads a node/miner release pair into `~/quantus-mining/bin/`. The script checks that pair's `--help` output and only passes auth/TLS flags when **both** binaries support miner QUIC auth (`quantus-miner/2`). Mixing an auth-capable node with a pre-auth miner (or the reverse) is rejected. Pin matching tags with `NODE_VERSION` / `MINER_VERSION` in `mining.conf` instead of relying on two independent `releases/latest` tags.
 
-**Docker mode** requires Docker Desktop (or Docker Engine) with Compose v2 (`docker compose`) and a running daemon. It pulls `ghcr.io/quantus-network/quantus-node` and `ghcr.io/quantus-network/quantus-miner` (release tags from GitHub) and installs a compose stack under `~/quantus-mining/docker/` (`docker-compose.yml`, `init-node.sh`, `init-miner.sh`, node keys, and chain data). The miner waits for the node's `miner-auth-token` and `miner-tls-cert-sha256` before connecting.
+**Docker mode** requires Docker Desktop (or Docker Engine) with Compose v2 (`docker compose`) and a running daemon. It pulls matching `ghcr.io/quantus-network/quantus-node` and `ghcr.io/quantus-network/quantus-miner` tags (from config, or a verified release pair) and installs a compose stack under `~/quantus-mining/docker/` (`docker-compose.yml`, `init-node.sh`, `init-miner.sh`, node keys, and chain data). When that pair supports miner auth, the miner waits for `miner-auth-token` and `miner-tls-cert-sha256` before connecting.
 
 **Linux ARM64:** there is no native `quantus-miner` release for Linux ARM64. Use `--mode docker` or an x86_64 host.
 
@@ -94,7 +94,7 @@ Manage settings with `./quantus-mining.sh config show` or `./quantus-mining.sh c
 
 GPU mining is recommended when available. Mining rewards accumulate at your wormhole address and appear in the wallet app, ready to spend.
 
-The script wires miner authentication automatically: after the node starts it reads `miner-auth-token` and `miner-tls-cert-sha256` from the node's chain directory and passes them to the miner. You do not need to copy those values by hand.
+The script wires miner authentication when the downloaded pair supports it: after the node starts it reads `miner-auth-token` and `miner-tls-cert-sha256` from the node's chain directory and passes them to the miner. You do not need to copy those values by hand. If the pair predates miner auth, the script starts without those flags.
 
 Example config template: [mining.conf.example](/scripts/mining.conf.example).
 
@@ -102,7 +102,7 @@ Example config template: [mining.conf.example](/scripts/mining.conf.example).
 
 ### 1. Download the Node Binary
 
-Get the latest `quantus-node` binary for your platform from [GitHub Releases](https://github.com/Quantus-Network/chain/releases/latest).
+Get a `quantus-node` binary that matches your miner from [GitHub Releases](https://github.com/Quantus-Network/chain/releases). Do not mix `chain/releases/latest` with an unrelated `quantus-miner` latest tag — they are published independently and may not speak the same miner protocol.
 
 Download it in your working directory.
 
@@ -196,7 +196,7 @@ Wait until logs show the miner server is listening (and the auth/TLS file paths)
 
 ### 5. Start the Miner
 
-Download the miner binary from [Miner Releases](https://github.com/Quantus-Network/quantus-miner/releases/latest). Node and miner versions must match: the wire protocol ALPN is `quantus-miner/2`. A mismatched pair fails at TLS handshake with "no application protocol".
+Download the miner binary from [Miner Releases](https://github.com/Quantus-Network/quantus-miner/releases). Node and miner versions must be a matching pair: the authenticated wire protocol ALPN is `quantus-miner/2`. Confirm `quantus-node --help` lists `--miner-auth-token-file` and `quantus-miner serve --help` lists `--auth-token-file` before using the commands below. A mismatched pair fails at TLS handshake with "no application protocol". Older releases (node v0.9.0, miner v3.3.1 and earlier) do not include miner auth — omit the auth/TLS flags and connect with `--node-addr` only.
 
 **Open a new terminal window (cmd + t). Let the node run in the original terminal.**
 
@@ -206,18 +206,21 @@ Download the miner binary from [Miner Releases](https://github.com/Quantus-Netwo
 xattr -d com.apple.quarantine quantus-miner-macos-aarch64 && chmod u+x quantus-miner-macos-aarch64
 ```
 
-Wait for the node logs to show the miner server is listening, then run the following command in the **separate terminal** (if not on Apple Silicon, replace `quantus-miner-macos-aarch64` with your platform's binary name). Replace `<CHAIN_DIR>` with the chain directory from the table above:
+Wait for the node logs to show the miner server is listening, then run the following in the **separate terminal**. Quote `CHAIN_DIR` — the macOS path contains a space. If not on Apple Silicon, replace `quantus-miner-macos-aarch64` with your platform's binary name.
 
 ```bash
+CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
+# Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
+
 ./quantus-miner-macos-aarch64 serve \
   --cpu-workers 4 \
   --gpu-devices 0 \
   --node-addr 127.0.0.1:9833 \
-  --auth-token-file <CHAIN_DIR>/miner-auth-token \
-  --tls-cert-sha256-file <CHAIN_DIR>/miner-tls-cert-sha256
+  --auth-token-file "$CHAIN_DIR/miner-auth-token" \
+  --tls-cert-sha256-file "$CHAIN_DIR/miner-tls-cert-sha256"
 ```
 
-Prefer `--auth-token-file` / `--tls-cert-sha256-file` over inline `--auth-token` / `--tls-cert-sha256` so the secret is not stored in shell history. Both flags are required; a wrong token or TLS pin is a permanent error (the miner will not reconnect-loop).
+Prefer `--auth-token-file` / `--tls-cert-sha256-file` over inline `--auth-token` / `--tls-cert-sha256` so the secret is not stored in shell history. When the node/miner pair includes miner auth, both flags are required; a wrong token or TLS pin is a permanent error (the miner will not reconnect-loop). On pre-auth releases, omit those flags.
 
 Depending on your machine and resources you can adjust `--gpu-devices` and `--cpu-workers` to see what provides the best balance of hash rate and system usability.
 
@@ -226,12 +229,15 @@ The above command is fairly conservative for most modern hardware.
 For example if you want to use your GPU and have many CPU cores available you could run
 
 ```bash
+CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
+# Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
+
 ./quantus-miner-macos-aarch64 serve \
   --cpu-workers 8 \
   --gpu-devices 1 \
   --node-addr 127.0.0.1:9833 \
-  --auth-token-file <CHAIN_DIR>/miner-auth-token \
-  --tls-cert-sha256-file <CHAIN_DIR>/miner-tls-cert-sha256
+  --auth-token-file "$CHAIN_DIR/miner-auth-token" \
+  --tls-cert-sha256-file "$CHAIN_DIR/miner-tls-cert-sha256"
 ```
 
 If the miner exits immediately, it is usually auth or version mismatch: confirm both files exist, that you waited for the miner server to listen, and that node and miner releases match (`quantus-miner/2`). A wrong token or TLS pin is a permanent error -- re-read the files (the token is never logged).

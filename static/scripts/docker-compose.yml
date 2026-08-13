@@ -48,14 +48,15 @@ services:
     command: >
       serve
       --node-addr ${MINER_NODE_ADDR}
-      --auth-token-file /node-data/chains/${CHAIN:-planck}/miner-auth-token
-      --tls-cert-sha256-file /node-data/chains/${CHAIN:-planck}/miner-tls-cert-sha256
       --metrics-port 9900
     environment:
       - CHAIN=${CHAIN:-planck}
       - MINER_CPU_WORKERS=${CPU_WORKERS:-4}
       - MINER_GPU_DEVICES=${GPU_DEVICES:-0}
       - RUST_LOG=${MINER_LOG:-info}
+      - MINER_PROTOCOL=${MINER_PROTOCOL:-legacy}
+      - MINER_AUTH_TOKEN_FILE=${MINER_AUTH_TOKEN_FILE:-}
+      - MINER_TLS_CERT_SHA256_FILE=${MINER_TLS_CERT_SHA256_FILE:-}
     volumes:
       - ./init-miner.sh:/init-miner.sh:ro
       - ./node-data:/node-data:ro

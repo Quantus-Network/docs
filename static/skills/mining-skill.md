@@ -143,12 +143,19 @@ Wait for the node logs to show that the miner server is listening on port 9833 b
 - Linux: `~/.local/share/quantus-node/chains/planck/`
 - macOS: `~/Library/Application Support/quantus-node/chains/planck/`
 
-Store as `CHAIN_DIR` for the miner command. **Never ask the user to paste the auth token into chat.** Point the miner at the files instead.
+Store as a quoted `CHAIN_DIR` for the miner command (required on macOS — the path contains a space). **Never ask the user to paste the auth token into chat.** Point the miner at the files instead.
+
+```bash
+# Darwin
+CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
+# Linux
+# CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
+```
 
 ## Step 9: Download and Start the External Miner
 
-In a **separate terminal**, download the miner binary from:
-https://github.com/Quantus-Network/quantus-miner/releases/latest
+In a **separate terminal**, download a miner release that matches the node from:
+https://github.com/Quantus-Network/quantus-miner/releases
 
 **macOS only:**
 ```bash
@@ -158,14 +165,17 @@ chmod u+x quantus-miner-macos-aarch64
 
 (Replace the filename with the one matching the user's platform.)
 
-Start the miner with the resource settings from Step 3. Both auth flags are required:
+Start the miner with the resource settings from Step 3. Both auth flags are required when the node/miner pair supports miner QUIC auth. Always quote `"$CHAIN_DIR/..."`:
 ```bash
+CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
+# Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
+
 ./quantus-miner-macos-aarch64 serve \
   --cpu-workers <CPU_WORKERS> \
   --gpu-devices <GPU_DEVICES> \
   --node-addr 127.0.0.1:9833 \
-  --auth-token-file <CHAIN_DIR>/miner-auth-token \
-  --tls-cert-sha256-file <CHAIN_DIR>/miner-tls-cert-sha256
+  --auth-token-file "$CHAIN_DIR/miner-auth-token" \
+  --tls-cert-sha256-file "$CHAIN_DIR/miner-tls-cert-sha256"
 ```
 
 Prefer file flags over `--auth-token` / `--tls-cert-sha256` so the secret is not in shell history. A wrong token or TLS pin is a permanent error -- do not retry-loop; fix the paths.
