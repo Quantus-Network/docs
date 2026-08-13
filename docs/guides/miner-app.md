@@ -52,4 +52,4 @@ Check your mining progress on the [telemetry dashboard](https://telemetry.quantu
 
 ## Next Steps
 
-For advanced mining configuration (external miner, Docker, build from source), see the full [Mining and Running a Node](./mining) guide.
+For advanced mining configuration (external miner, build from source), see the full [Mining and Running a Node](./mining) guide.

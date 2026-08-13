@@ -51,10 +51,10 @@ flowchart TD
 | Parameter | Value | Description |
 |-----------|-------|-------------|
 | Block Time | ~12 seconds target | Planck testnet |
-| Max Reorg Depth | 180 blocks | `MaxReorgDepth` |
+| Max Reorg Depth | 100 blocks | `MaxReorgDepth` |
 | Difficulty Adjustment | +/-10% per block | `DifficultyAdjustPercentClamp` |
 | EMA Smoothing | alpha = 0.1 | `EmaAlpha = 100/1000` |
-| Finalization | 179 blocks behind best | `MaxReorgDepth - 1` |
+| Finalization | 100 blocks behind best | `MaxReorgDepth` |
 | Native Token | QUAN (12 decimals) | Max supply 21,000,000 |
 | SS58 Prefix | 189 | Addresses start with `qz...` |
 
@@ -77,7 +77,7 @@ Instead of "longest chain" (most blocks), Quantus uses **heaviest chain** (most 
 - Fork choice selects the chain with highest `TotalWork`
 - This correctly weights high-difficulty blocks over many easy blocks
 
-Finalization occurs automatically at `MaxReorgDepth - 1` blocks behind the best block (179 blocks), meaning blocks older than ~18 minutes are considered final.
+Finalization occurs automatically at `MaxReorgDepth` blocks behind the best block (100 blocks), meaning blocks older than ~20 minutes are considered final.
 
 ## Mining Modes
 
@@ -108,12 +108,18 @@ RUST_LOG=info ./quantus-node \
     --rewards-inner-hash <YOUR_INNER_HASH> \
     --miner-listen-port 9833
 
-# In a separate terminal, start the external miner
+# In a separate terminal, start the external miner (auth token + TLS pin required)
+CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
+# macOS: CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
 RUST_LOG=info ./quantus-miner serve \
     --node-addr 127.0.0.1:9833 \
+    --auth-token-file "$CHAIN_DIR/miner-auth-token" \
+    --tls-cert-sha256-file "$CHAIN_DIR/miner-tls-cert-sha256" \
     --gpu-devices 1 \
     --cpu-workers 0
 ```
+
+Quote `CHAIN_DIR` on macOS — `Application Support` contains a space. The token is not logged -- read `miner-auth-token`. Miners must pin `miner-tls-cert-sha256`. Do not expose port 9833/UDP publicly.
 
 GPU mining produces ~500-1000 MH/s vs ~15 MH/s per CPU thread. Multiple miners can connect to the same node simultaneously -- the node broadcasts jobs to all connected miners and the first valid result wins.
 

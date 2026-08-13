@@ -34,7 +34,7 @@ Quantus's security model is layered across multiple boundaries:
 ### Consensus Layer
 - **QPoW mining:** Double Poseidon2 hashing, audited by Eiger
 - **Chain selection:** Heaviest-chain (cumulative work), not longest-chain
-- **Finalization:** Deterministic at 179 blocks behind best
+- **Finalization:** Deterministic at 100 blocks behind best (`MaxReorgDepth`)
 
 ### Application Layer
 - **Replay protection:** 11-stage transaction extension pipeline (CheckNonce, CheckEra, CheckGenesis, etc.)
