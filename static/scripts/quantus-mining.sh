@@ -8,7 +8,7 @@
 # Config file: ~/quantus-mining/mining.conf (mode 600)
 #
 # Usage:
-#   ./quantus-mining.sh setup [--force] [--mode binary|docker]
+#   ./quantus-mining.sh setup [--force]
 #   ./quantus-mining.sh config show|set KEY VALUE|edit
 #   ./quantus-mining.sh start [-d|--detach]
 #   ./quantus-mining.sh start-node|start-miner
@@ -34,13 +34,7 @@ readonly NODE_KEY_PATH="${MINING_DIR}/node_key.p2p"
 
 readonly CHAIN_REPO="Quantus-Network/chain"
 readonly MINER_REPO="Quantus-Network/quantus-miner"
-readonly NODE_IMAGE="ghcr.io/quantus-network/quantus-node"
-readonly MINER_IMAGE="ghcr.io/quantus-network/quantus-miner"
-readonly DEFAULT_SCRIPTS_BASE="https://docs.quantus.com/scripts"
-readonly DOCKER_STACK_FILES="docker-compose.yml init-node.sh init-miner.sh"
 readonly EDITABLE_KEYS="NODE_NAME CPU_WORKERS GPU_DEVICES MINER_LISTEN_PORT CHAIN"
-
-DOCKER_COMPOSE=""
 
 OS=""
 ARCH=""
@@ -104,238 +98,13 @@ detect_platform() {
       ;;
   esac
 
-  if [ "$OS" = "linux" ] && [ -z "$MINER_ASSET" ] && [ "${RUN_MODE:-binary}" != "docker" ]; then
-    die "No quantus-miner release for Linux ARM64. Use Docker mode (--mode docker) or an x86_64 machine."
+  if [ "$OS" = "linux" ] && [ -z "$MINER_ASSET" ]; then
+    die "No quantus-miner release for Linux ARM64. Mine from macOS or Linux x86_64 (GPU mining needs a native miner)."
   fi
-}
-
-resolve_docker_compose_cmd() {
-  if docker compose version >/dev/null 2>&1; then
-    DOCKER_COMPOSE="docker compose"
-    return 0
-  fi
-  if command -v docker-compose >/dev/null 2>&1; then
-    DOCKER_COMPOSE="docker-compose"
-    return 0
-  fi
-  return 1
-}
-
-require_docker() {
-  require_cmd docker
-  resolve_docker_compose_cmd \
-    || die "Docker Compose not found. Install Docker Desktop or the docker-compose-plugin."
-  docker info >/dev/null 2>&1 || die "Docker daemon is not running. Start Docker and retry."
-}
-
-docker_available() {
-  command -v docker >/dev/null 2>&1 \
-    && resolve_docker_compose_cmd \
-    && docker info >/dev/null 2>&1
-}
-
-scripts_base() {
-  if [ -n "${QUANTUS_SCRIPTS_BASE:-}" ]; then
-    printf '%s' "$QUANTUS_SCRIPTS_BASE"
-    return 0
-  fi
-
-  local script_path=""
-  if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
-    script_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    if [ -f "${script_path}/docker-compose.yml" ]; then
-      printf '%s' "$script_path"
-      return 0
-    fi
-  fi
-
-  printf '%s' "$DEFAULT_SCRIPTS_BASE"
-}
-
-fetch_script_asset() {
-  local base="$1"
-  local file="$2"
-  local dest="$3"
-
-  if [ -f "${base}/${file}" ]; then
-    cp "${base}/${file}" "$dest"
-    return 0
-  fi
-
-  curl -fsSL "${base}/${file}" -o "$dest"
-}
-
-docker_stack_dir() {
-  local dir="docker"
-  if [ -f "$CONFIG_FILE" ]; then
-    dir="$(grep -E '^DOCKER_DIR=' "$CONFIG_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)"
-    dir="${dir:-docker}"
-  fi
-  echo "${MINING_DIR}/${dir}"
-}
-
-docker_compose() {
-  require_docker
-  local docker_dir
-  docker_dir="$(docker_stack_dir)"
-  [ -f "${docker_dir}/docker-compose.yml" ] || die "Docker stack not found at ${docker_dir}. Run: ${SCRIPT_NAME} setup --mode docker"
-  (cd "$docker_dir" && ${DOCKER_COMPOSE} "$@")
-}
-
-docker_stack_present() {
-  [ -f "$(docker_stack_dir)/docker-compose.yml" ]
-}
-
-docker_stack_running() {
-  local docker_dir
-
-  docker_available || return 1
-
-  docker_dir="$(docker_stack_dir)"
-  docker_stack_present || return 1
-  (cd "$docker_dir" && ${DOCKER_COMPOSE} ps --status running 2>/dev/null \
-    | grep -qE 'quantus-node|quantus-miner')
-}
-
-stop_named_docker_containers() {
-  local name stopped=false
-
-  docker_available || return 1
-
-  for name in quantus-node quantus-miner; do
-    if docker ps -aq -f "name=^/${name}$" 2>/dev/null | grep -q .; then
-      info "Stopping container ${name}..."
-      docker stop "$name" >/dev/null 2>&1 || true
-      docker rm "$name" >/dev/null 2>&1 || true
-      stopped=true
-    fi
-  done
-
-  [ "$stopped" = true ]
-}
-
-stop_docker_stack() {
-  local best_effort="${1:-false}"
-  local docker_dir stopped=false
-
-  docker_dir="$(docker_stack_dir)"
-
-  if ! docker_stack_present; then
-    [ "$best_effort" = "true" ] && return 1
-    warn "No Docker stack found at ${docker_dir}."
-    return 1
-  fi
-
-  if ! docker_available; then
-    if [ "$best_effort" = "true" ]; then
-      warn "Docker is unavailable; skipping compose shutdown."
-      return 1
-    fi
-    require_docker
-  fi
-
-  info "Stopping Docker mining stack..."
-  if docker_stack_running; then
-    (cd "$docker_dir" && ${DOCKER_COMPOSE} down --remove-orphans)
-    stopped=true
-    info "Mining stack stopped."
-  elif (cd "$docker_dir" && ${DOCKER_COMPOSE} down --remove-orphans 2>/dev/null); then
-    stopped=true
-    info "Mining stack stopped."
-  elif stop_named_docker_containers; then
-    stopped=true
-    info "Mining stack stopped."
-  else
-    warn "No running quantus-node or quantus-miner containers found."
-  fi
-
-  [ "$stopped" = true ]
-}
-
-install_docker_stack() {
-  local docker_dir="$1"
-  local force="${2:-false}"
-  local base file
-
-  base="$(scripts_base)"
-  mkdir -p "${docker_dir}/node-keys" "${docker_dir}/node-data"
-
-  for file in $DOCKER_STACK_FILES; do
-    if [ "$force" = "true" ] || [ ! -f "${docker_dir}/${file}" ]; then
-      info "Installing ${file}..."
-      fetch_script_asset "$base" "$file" "${docker_dir}/${file}" \
-        || die "Failed to install ${file} from ${base}"
-    else
-      info "Using existing ${docker_dir}/${file}"
-    fi
-  done
-
-  chmod +x "${docker_dir}/init-node.sh" "${docker_dir}/init-miner.sh"
-  info "Docker stack files ready in ${docker_dir}"
-}
-
-write_docker_env() {
-  local docker_dir miner_node_addr quantus_node_ipv4
-  local miner_auth_token_file="" miner_tls_pin_file=""
-  docker_dir="$(docker_stack_dir)"
-  CHAIN="${CHAIN:-planck}"
-  MINER_LISTEN_PORT="${MINER_LISTEN_PORT:-9833}"
-  quantus_node_ipv4="${QUANTUS_NODE_IPV4:-172.28.0.10}"
-  # quantus-miner --node-addr requires IP:port (Rust SocketAddr); hostnames fail.
-  miner_node_addr="${quantus_node_ipv4}:${MINER_LISTEN_PORT}"
-  mkdir -p "$docker_dir"
-
-  if [ "${MINER_PROTOCOL:-}" = "auth" ]; then
-    miner_auth_token_file="/node-data/chains/${CHAIN}/miner-auth-token"
-    miner_tls_pin_file="/node-data/chains/${CHAIN}/miner-tls-cert-sha256"
-  fi
-
-  cat > "${docker_dir}/.env" <<EOF
-# Generated by ${SCRIPT_NAME} — do not commit or share
-REWARDS_INNER_HASH=${INNER_HASH}
-CHAIN=${CHAIN}
-NODE_NAME=${NODE_NAME}
-NODE_VERSION=${NODE_VERSION:-latest}
-MINER_VERSION=${MINER_VERSION:-latest}
-CPU_WORKERS=${CPU_WORKERS}
-GPU_DEVICES=${GPU_DEVICES}
-HOST_MINER_LISTEN_PORT=${MINER_LISTEN_PORT}
-QUANTUS_NODE_IPV4=${quantus_node_ipv4}
-QUANTUS_DOCKER_SUBNET=${QUANTUS_DOCKER_SUBNET:-172.28.0.0/16}
-MINER_NODE_ADDR=${miner_node_addr}
-MINER_PROTOCOL=${MINER_PROTOCOL:-legacy}
-MINER_AUTH_TOKEN_FILE=${miner_auth_token_file}
-MINER_TLS_CERT_SHA256_FILE=${miner_tls_pin_file}
-EOF
-  chmod 600 "${docker_dir}/.env"
-  info "Wrote Docker env to ${docker_dir}/.env"
-}
-
-prompt_run_mode() {
-  local choice
-
-  echo ""
-  echo "Deployment mode:"
-  echo "  [1] Direct binary — download quantus-node and quantus-miner (default)"
-  echo "  [2] Docker — docker compose stack (macOS, Linux, WSL2)"
-  read -r -p "Enter choice (1/2) [1]: " choice
-  choice="${choice:-1}"
-
-  case "$choice" in
-    1) RUN_MODE="binary" ;;
-    2) RUN_MODE="docker" ;;
-    *) die "Invalid choice: $choice" ;;
-  esac
 }
 
 wormhole_keygen() {
-  if [ "${RUN_MODE:-binary}" = "docker" ]; then
-    require_docker
-    docker run --rm -i "${NODE_IMAGE}:${NODE_VERSION:-latest}" \
-      key quantus --scheme wormhole "$@" 2>&1
-  else
-    "$NODE_BIN" key quantus --scheme wormhole "$@" 2>&1
-  fi
+  "$NODE_BIN" key quantus --scheme wormhole "$@" 2>&1
 }
 
 ensure_dirs() {
@@ -431,53 +200,10 @@ detect_binary_miner_protocol() {
   classify_miner_protocol "$node_help" "$miner_help"
 }
 
-detect_docker_miner_protocol() {
-  local node_help miner_help
-  local node_image="${NODE_IMAGE}:${NODE_VERSION:-latest}"
-  local miner_image="${MINER_IMAGE}:${MINER_VERSION:-latest}"
-
-  node_help="$(docker run --rm --platform linux/amd64 "$node_image" --help 2>&1 || true)"
-  miner_help="$(docker run --rm --platform linux/amd64 "$miner_image" serve --help 2>&1 || true)"
-  classify_miner_protocol "$node_help" "$miner_help"
-}
-
 maybe_wait_for_miner_auth_files() {
   if [ "${MINER_PROTOCOL:-}" = "auth" ]; then
     wait_for_miner_auth_files "${1:-30}"
   fi
-}
-
-resolve_docker_versions() {
-  if [ -f "$CONFIG_FILE" ]; then
-    # shellcheck source=/dev/null
-    source "$CONFIG_FILE"
-  fi
-
-  if [ -z "${NODE_VERSION:-}" ]; then
-    NODE_VERSION="$(fetch_latest_tag "$CHAIN_REPO")"
-  fi
-  if [ -z "${MINER_VERSION:-}" ]; then
-    MINER_VERSION="$(fetch_latest_tag "$MINER_REPO")"
-  fi
-
-  info "Node image tag: ${NODE_VERSION}"
-  info "Miner image tag: ${MINER_VERSION}"
-}
-
-pull_docker_images() {
-  resolve_docker_versions
-  export NODE_VERSION MINER_VERSION
-
-  info "Pulling node image ${NODE_IMAGE}:${NODE_VERSION}..."
-  docker pull "${NODE_IMAGE}:${NODE_VERSION}" \
-    || die "Failed to pull ${NODE_IMAGE}:${NODE_VERSION}"
-
-  info "Pulling miner image ${MINER_IMAGE}:${MINER_VERSION}..."
-  docker pull "${MINER_IMAGE}:${MINER_VERSION}" \
-    || die "Failed to pull ${MINER_IMAGE}:${MINER_VERSION}"
-
-  info "Using node image ${NODE_IMAGE}:${NODE_VERSION}"
-  info "Using miner image ${MINER_IMAGE}:${MINER_VERSION}"
 }
 
 download_node_binary() {
@@ -651,8 +377,7 @@ write_config() {
 # Quantus mining configuration — ${CONFIG_FILE}
 # Generated by ${SCRIPT_NAME} setup
 
-RUN_MODE="${RUN_MODE:-binary}"
-DOCKER_DIR="docker"
+RUN_MODE="binary"
 NODE_NAME="${NODE_NAME}"
 INNER_HASH="${INNER_HASH}"
 WORMHOLE_ADDRESS="${WORMHOLE_ADDRESS}"
@@ -667,10 +392,6 @@ MINER_PROTOCOL="${MINER_PROTOCOL:-}"
 EOF
   chmod 600 "$CONFIG_FILE"
   info "Wrote config to ${CONFIG_FILE}"
-
-  if [ "${RUN_MODE:-binary}" = "docker" ]; then
-    write_docker_env
-  fi
 }
 
 load_config() {
@@ -679,7 +400,9 @@ load_config() {
   source "$CONFIG_FILE"
 
   RUN_MODE="${RUN_MODE:-binary}"
-  DOCKER_DIR="${DOCKER_DIR:-docker}"
+  if [ "$RUN_MODE" = "docker" ]; then
+    die "Docker mining is no longer supported. Re-run: ${SCRIPT_NAME} setup --force"
+  fi
   : "${NODE_NAME:?NODE_NAME missing in config}"
   : "${INNER_HASH:?INNER_HASH missing in config}"
   NODE_KEY_FILE="${NODE_KEY_FILE:-node_key.p2p}"
@@ -899,8 +622,6 @@ detect_run_mode() {
     # shellcheck source=/dev/null
     source "$CONFIG_FILE"
     RUN_MODE="${RUN_MODE:-binary}"
-  elif docker_stack_present; then
-    RUN_MODE="docker"
   fi
 }
 
@@ -908,14 +629,6 @@ mining_stack_running() {
   local node_pid miner_pid
 
   detect_run_mode
-
-  if docker_stack_running; then
-    return 0
-  fi
-
-  if [ "$RUN_MODE" = "docker" ]; then
-    return 1
-  fi
 
   node_pid="$(read_pid_file "$NODE_PID_FILE")"
   miner_pid="$(read_pid_file "$MINER_PID_FILE")"
@@ -969,29 +682,22 @@ Working directory: ${MINING_DIR}
 Config file:       ${CONFIG_FILE}
 
 Commands:
-  setup [--force] [--mode binary|docker]
-                            Interactive setup: choose binary or Docker, generate keys, write config
+  setup [--force]           Interactive setup: download binaries, generate keys, write config
   config show               Show current config (inner hash masked)
   config set KEY VALUE      Update an editable config key
   config edit               Open config in \$EDITOR
-  start [-d|--detach]       Start node + miner (binary or Docker per RUN_MODE in config)
-  start-node                Start only the node (binary: foreground; Docker: quantus-node service)
+  start [-d|--detach]       Start node + miner
+  start-node                Start only the node (foreground)
   start-miner               Start only the miner (node must already be running)
   stop                      Stop node, miner, and related helper processes
   restart [-d|--detach]     Stop then start
   uninstall [--force]       Stop processes and remove ${MINING_DIR} (config, keys, binaries, logs)
   help                      Show this help
 
-Deployment modes (set during setup):
-  binary                    Download and run quantus-node and quantus-miner directly
-  docker                    Docker compose stack in ${MINING_DIR}/docker/ (macOS, Linux, WSL2)
-
 Editable config keys: ${EDITABLE_KEYS}
 
 Environment:
   QUANTUS_MINING_DIR        Override default working directory (${DEFAULT_MINING_DIR})
-  QUANTUS_SCRIPTS_BASE      Override URL/path for docker-compose.yml, init-node.sh, init-miner.sh
-                            (default: script directory, else ${DEFAULT_SCRIPTS_BASE})
   QUANTUS_NODE_DATA_PATH    Override node data directory (default: Substrate quantus-node path)
   NODE_VERSION / MINER_VERSION
                             Pin a matching node/miner release pair (do not mix independent latest tags)
@@ -1006,11 +712,11 @@ cmd_setup() {
       --force) force="true" ;;
       --mode)
         shift
-        [ $# -gt 0 ] || die "Missing value for --mode (use binary or docker)"
-        RUN_MODE="$1"
-        case "$RUN_MODE" in
-          binary|docker) ;;
-          *) die "Invalid --mode: ${RUN_MODE} (use binary or docker)" ;;
+        [ $# -gt 0 ] || die "Missing value for --mode"
+        case "$1" in
+          docker) die "Docker mining is no longer supported. Use native binaries (GPU mining needs a host miner)." ;;
+          binary) ;;
+          *) die "Unknown setup mode: $1" ;;
         esac
         ;;
       *) die "Unknown setup option: $1" ;;
@@ -1019,22 +725,13 @@ cmd_setup() {
   done
 
   require_cmd curl
+  require_cmd tar
 
-  if [ -z "${RUN_MODE:-}" ]; then
-    prompt_run_mode
-  fi
-
-  if [ "$RUN_MODE" = "docker" ]; then
-    require_docker
-  else
-    require_cmd tar
-  fi
-
+  RUN_MODE="binary"
   detect_platform
   ensure_dirs
 
-  info "Deployment mode: ${RUN_MODE}"
-  info "Platform: ${OS} / ${ARCH} (${NODE_TARGET:-docker-amd64})"
+  info "Platform: ${OS} / ${ARCH} (${NODE_TARGET})"
   info "Working directory: ${MINING_DIR}"
 
   if [ -f "$CONFIG_FILE" ] && [ "$force" != "true" ]; then
@@ -1046,20 +743,13 @@ cmd_setup() {
     esac
   fi
 
-  if [ "$RUN_MODE" = "docker" ]; then
-    resolve_docker_versions
-    install_docker_stack "$(docker_stack_dir)" "$force"
-    pull_docker_images
-    detect_docker_miner_protocol
-  else
-    download_binaries "$force"
+  download_binaries "$force"
 
-    if [ ! -f "$NODE_KEY_PATH" ]; then
-      info "Generating node P2P identity..."
-      "$NODE_BIN" key generate-node-key --file "$NODE_KEY_PATH"
-    else
-      info "Using existing node key at ${NODE_KEY_PATH}"
-    fi
+  if [ ! -f "$NODE_KEY_PATH" ]; then
+    info "Generating node P2P identity..."
+    "$NODE_BIN" key generate-node-key --file "$NODE_KEY_PATH"
+  else
+    info "Using existing node key at ${NODE_KEY_PATH}"
   fi
 
   read -r -p "Enter a node name (shown on telemetry): " NODE_NAME
@@ -1070,12 +760,8 @@ cmd_setup() {
   write_config
 
   echo ""
-  info "Setup complete (${RUN_MODE} mode)."
+  info "Setup complete."
   info "Start mining with: ${SCRIPT_NAME} start"
-  if [ "$RUN_MODE" = "docker" ]; then
-    info "Docker stack: $(docker_stack_dir)"
-    info "Tail logs with: cd $(docker_stack_dir) && docker compose logs -f"
-  fi
   info "Telemetry dashboard: https://telemetry.quantus.cat/"
 }
 
@@ -1131,18 +817,6 @@ cmd_config() {
 ensure_start_prerequisites() {
   load_config
   ensure_dirs
-
-  if [ "$RUN_MODE" = "docker" ]; then
-    require_docker
-    resolve_docker_versions
-    if ! docker image inspect "${NODE_IMAGE}:${NODE_VERSION}" >/dev/null 2>&1 \
-      || ! docker image inspect "${MINER_IMAGE}:${MINER_VERSION}" >/dev/null 2>&1; then
-      pull_docker_images
-    fi
-    detect_docker_miner_protocol
-    write_docker_env
-    return 0
-  fi
 
   detect_platform
   [ -x "$NODE_BIN" ] || die "quantus-node not found at ${NODE_BIN}. Run: ${SCRIPT_NAME} setup"
@@ -1231,15 +905,6 @@ cmd_start_node() {
     die "Node already running on port ${MINER_LISTEN_PORT}. Use ${SCRIPT_NAME} start-miner in another terminal."
   fi
 
-  if [ "$RUN_MODE" = "docker" ]; then
-    info "Starting quantus-node container (Ctrl+C to stop)."
-    info "When the node is listening, open another terminal and run:"
-    info "  ${SCRIPT_NAME} start-miner"
-    echo ""
-    docker_compose up quantus-node
-    return 0
-  fi
-
   info "Starting quantus-node in foreground."
   info "When the node logs show the miner server is listening, open another terminal and run:"
   info "  ${SCRIPT_NAME} start-miner"
@@ -1249,15 +914,6 @@ cmd_start_node() {
 
 cmd_start_miner() {
   ensure_start_prerequisites
-
-  if [ "$RUN_MODE" = "docker" ]; then
-    if ! port_listening "$MINER_LISTEN_PORT"; then
-      die "Node miner server is not listening on port ${MINER_LISTEN_PORT}. Start the node first: ${SCRIPT_NAME} start-node"
-    fi
-    info "Starting quantus-miner container (hash rate in logs below)."
-    docker_compose up quantus-miner
-    return 0
-  fi
 
   if ! port_listening "$MINER_LISTEN_PORT"; then
     die "Node miner server is not listening on port ${MINER_LISTEN_PORT}. Start the node first: ${SCRIPT_NAME} start-node"
@@ -1277,30 +933,6 @@ cmd_start() {
 
   if mining_stack_running; then
     die "Mining stack already running. Run: ${SCRIPT_NAME} stop (if detached) or stop the running processes"
-  fi
-
-  if [ "$RUN_MODE" = "docker" ]; then
-    resolve_docker_versions
-    write_docker_env
-    pull_docker_images
-
-    if [ "$DETACH" = "true" ]; then
-      docker_compose up -d
-      echo ""
-      info "Mining stack running in Docker (detached)."
-      info "Logs: cd $(docker_stack_dir) && docker compose logs -f"
-      info "Wait for full sync before expecting blocks."
-      info "Telemetry: https://telemetry.quantus.cat/ (search for '${NODE_NAME}')"
-      info "Stop with: ${SCRIPT_NAME} stop"
-      return 0
-    fi
-
-    info "Starting node + miner via docker compose (Ctrl+C stops both)."
-    info "For split terminals: ${SCRIPT_NAME} start-node  then  ${SCRIPT_NAME} start-miner"
-    info "Telemetry: https://telemetry.quantus.cat/ (search for '${NODE_NAME}')"
-    echo ""
-    docker_compose up
-    return 0
   fi
 
   node_log="${LOG_DIR}/node.log"
@@ -1384,13 +1016,6 @@ cmd_stop() {
   detect_run_mode
   MINER_LISTEN_PORT="${MINER_LISTEN_PORT:-9833}"
 
-  if [ "$RUN_MODE" = "docker" ] || docker_stack_present; then
-    stop_docker_stack true && stopped=true
-    if [ "$RUN_MODE" = "docker" ]; then
-      return 0
-    fi
-  fi
-
   # Miner first, then node.
   if stop_from_pid_file "quantus-miner" "$MINER_PID_FILE" "$MINER_BIN"; then
     stopped=true
@@ -1436,7 +1061,7 @@ cmd_uninstall() {
     shift
   done
 
-  if [ ! -e "$MINING_DIR" ] && ! mining_stack_running && ! docker_stack_running; then
+  if [ ! -e "$MINING_DIR" ] && ! mining_stack_running; then
     warn "Nothing to uninstall at ${MINING_DIR}."
     return 0
   fi
@@ -1445,8 +1070,8 @@ cmd_uninstall() {
     echo ""
     warn "This permanently removes ${MINING_DIR}, including:"
     echo "  - mining.conf (inner hash and wormhole address)"
-    echo "  - node_key.p2p or docker/node-keys/"
-    echo "  - downloaded binaries, docker stack, and logs"
+    echo "  - node_key.p2p"
+    echo "  - downloaded binaries and logs"
     echo ""
     warn "Ensure your 24-word seed phrase is backed up before continuing."
     read -r -p "Uninstall Quantus mining setup? (y/N): " confirm
@@ -1461,11 +1086,6 @@ cmd_uninstall() {
   if [ -e "$MINING_DIR" ]; then
     info "Removing ${MINING_DIR}..."
     rm -rf "$MINING_DIR"
-  fi
-
-  if docker_stack_running || stop_named_docker_containers; then
-    warn "Some Docker containers may still be running. Stop Docker and rerun uninstall, or run:"
-    warn "  docker stop quantus-node quantus-miner && docker rm quantus-node quantus-miner"
   fi
 
   info "Uninstall complete."
