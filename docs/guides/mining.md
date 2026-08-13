@@ -58,7 +58,7 @@ chmod +x quantus-mining.sh
 
 The script generates your wormhole inner hash, node identity, and a config file at `~/quantus-mining/mining.conf`. It downloads native `quantus-node` and `quantus-miner` binaries into `~/quantus-mining/bin/`. GPU mining is recommended; the miner runs on the host so it can use Metal / Vulkan / DirectX.
 
-The script checks the downloaded pair's `--help` output and only passes auth/TLS flags when **both** binaries support miner QUIC auth (`quantus-miner/2`). Mixing an auth-capable node with a pre-auth miner (or the reverse) is rejected. Pin matching tags with `NODE_VERSION` / `MINER_VERSION` in `mining.conf` instead of relying on two independent `releases/latest` tags.
+The script checks the downloaded pair's `--help` output and only passes auth/TLS flags when **both** binaries support miner QUIC auth (`quantus-miner/2`). Mixing an auth-capable node with a pre-auth miner (or the reverse) is rejected. Pin a matching pair with `NODE_VERSION` / `MINER_VERSION` in `mining.conf` (or `./quantus-mining.sh config set NODE_VERSION <tag>`), then run `./quantus-mining.sh setup --force` to download those tags. Environment variables of the same name override the file. Unset pins fetch GitHub `releases/latest` independently and may not match.
 
 **Linux ARM64:** there is no native `quantus-miner` release. Mine from macOS or Linux x86_64.
 
@@ -74,7 +74,7 @@ Node output in your terminal (foreground); miner runs in the background (`~/quan
 
 Add `-d` or `--detach` to run both in the background. Stop with `./quantus-mining.sh stop` from any terminal (works for foreground and detached runs).
 
-Manage settings with `./quantus-mining.sh config show` or `./quantus-mining.sh config set CPU_WORKERS 4`. Editable keys: `NODE_NAME`, `CPU_WORKERS`, `GPU_DEVICES`, `MINER_LISTEN_PORT`, `CHAIN`.
+Manage settings with `./quantus-mining.sh config show` or `./quantus-mining.sh config set CPU_WORKERS 4`. Editable keys: `NODE_NAME`, `CPU_WORKERS`, `GPU_DEVICES`, `MINER_LISTEN_PORT`, `CHAIN`, `NODE_VERSION`, `MINER_VERSION`. Changing version pins does not swap binaries until you re-run `setup --force`.
 
 GPU mining is recommended when available. Mining rewards accumulate at your wormhole address and appear in the wallet app, ready to spend.
 

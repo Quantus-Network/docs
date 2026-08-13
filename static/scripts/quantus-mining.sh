@@ -34,13 +34,14 @@ readonly NODE_KEY_PATH="${MINING_DIR}/node_key.p2p"
 
 readonly CHAIN_REPO="Quantus-Network/chain"
 readonly MINER_REPO="Quantus-Network/quantus-miner"
-readonly EDITABLE_KEYS="NODE_NAME CPU_WORKERS GPU_DEVICES MINER_LISTEN_PORT CHAIN"
+readonly EDITABLE_KEYS="NODE_NAME CPU_WORKERS GPU_DEVICES MINER_LISTEN_PORT CHAIN NODE_VERSION MINER_VERSION"
 
 OS=""
 ARCH=""
 NODE_TARGET=""
 MINER_ASSET=""
 DOCKER_COMPOSE=""
+NODE_LAUNCH_ARGS=()
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -374,9 +375,34 @@ download_miner_binary() {
   info "Installed quantus-miner to ${MINER_BIN}"
 }
 
+read_conf_value() {
+  local key="$1"
+  local raw=""
+  [ -f "$CONFIG_FILE" ] || return 0
+  raw="$(grep -E "^${key}=" "$CONFIG_FILE" 2>/dev/null | head -n 1 | cut -d= -f2- || true)"
+  raw="${raw#\"}"
+  raw="${raw%\"}"
+  printf '%s' "$raw"
+}
+
+# Env NODE_VERSION / MINER_VERSION override mining.conf. Empty pins fetch GitHub latest.
+load_version_pins() {
+  local conf_node conf_miner
+  conf_node="$(read_conf_value NODE_VERSION)"
+  conf_miner="$(read_conf_value MINER_VERSION)"
+  if [ -z "${NODE_VERSION:-}" ] && [ -n "$conf_node" ]; then
+    NODE_VERSION="$conf_node"
+  fi
+  if [ -z "${MINER_VERSION:-}" ] && [ -n "$conf_miner" ]; then
+    MINER_VERSION="$conf_miner"
+  fi
+}
+
 download_binaries() {
   local force="${1:-false}"
   local node_tag miner_tag
+
+  load_version_pins
 
   if [ "$force" = "true" ] || [ ! -x "$NODE_BIN" ]; then
     node_tag="${NODE_VERSION:-}"
@@ -384,7 +410,6 @@ download_binaries() {
     download_node_binary "$node_tag"
   else
     node_tag="${NODE_VERSION:-}"
-    [ -n "$node_tag" ] || node_tag="$(grep -E '^NODE_VERSION=' "$CONFIG_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)"
     [ -n "$node_tag" ] || node_tag="$(fetch_latest_tag "$CHAIN_REPO")"
     info "Using existing quantus-node at ${NODE_BIN}"
   fi
@@ -395,7 +420,6 @@ download_binaries() {
     download_miner_binary "$miner_tag"
   else
     miner_tag="${MINER_VERSION:-}"
-    [ -n "$miner_tag" ] || miner_tag="$(grep -E '^MINER_VERSION=' "$CONFIG_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)"
     [ -n "$miner_tag" ] || miner_tag="$(fetch_latest_tag "$MINER_REPO")"
     info "Using existing quantus-miner at ${MINER_BIN}"
   fi
@@ -874,7 +898,7 @@ Environment:
   QUANTUS_MINING_DIR        Override default working directory (${DEFAULT_MINING_DIR})
   QUANTUS_NODE_DATA_PATH    Node --base-path (default: Substrate quantus-node data dir)
   NODE_VERSION / MINER_VERSION
-                            Pin a matching node/miner release pair (do not mix independent latest tags)
+                            Pin a matching node/miner pair (env overrides mining.conf; used by setup / setup --force)
 EOF
 }
 
@@ -971,9 +995,16 @@ cmd_config() {
         GPU_DEVICES) GPU_DEVICES="$value" ;;
         MINER_LISTEN_PORT) MINER_LISTEN_PORT="$value" ;;
         CHAIN) CHAIN="$value" ;;
+        NODE_VERSION) NODE_VERSION="$value" ;;
+        MINER_VERSION) MINER_VERSION="$value" ;;
       esac
       write_config
       info "Updated ${key}=${value}"
+      case "$key" in
+        NODE_VERSION|MINER_VERSION)
+          info "Re-run ${SCRIPT_NAME} setup --force to download that pair."
+          ;;
+      esac
       ;;
     edit)
       [ -f "$CONFIG_FILE" ] || die "Config not found. Run: ${SCRIPT_NAME} setup"
@@ -1006,17 +1037,23 @@ Then re-run: ${SCRIPT_NAME} setup --force"
   detect_binary_miner_protocol
 }
 
-run_quantus_node() {
-  "$NODE_BIN" \
-    --name "$NODE_NAME" \
-    --validator \
-    --base-path "$(node_data_path)" \
-    --miner-listen-port "$MINER_LISTEN_PORT" \
-    --chain "$CHAIN" \
-    --node-key-file "$START_NODE_KEY" \
-    --rewards-inner-hash "$INNER_HASH" \
-    --max-blocks-per-request 64 \
+set_node_launch_args() {
+  NODE_LAUNCH_ARGS=(
+    --name "$NODE_NAME"
+    --validator
+    --base-path "$(node_data_path)"
+    --miner-listen-port "$MINER_LISTEN_PORT"
+    --chain "$CHAIN"
+    --node-key-file "$START_NODE_KEY"
+    --rewards-inner-hash "$INNER_HASH"
+    --max-blocks-per-request 64
     --sync full
+  )
+}
+
+run_quantus_node() {
+  set_node_launch_args
+  "$NODE_BIN" "${NODE_LAUNCH_ARGS[@]}"
 }
 
 run_quantus_miner() {
@@ -1120,16 +1157,8 @@ cmd_start() {
 
   if [ "$DETACH" = "true" ]; then
     info "Starting quantus-node in background..."
-    nohup "$NODE_BIN" \
-      --name "$NODE_NAME" \
-      --validator \
-      --miner-listen-port "$MINER_LISTEN_PORT" \
-      --chain "$CHAIN" \
-      --node-key-file "$START_NODE_KEY" \
-      --rewards-inner-hash "$INNER_HASH" \
-      --max-blocks-per-request 64 \
-      --sync full \
-      >> "$node_log" 2>&1 &
+    set_node_launch_args
+    nohup "$NODE_BIN" "${NODE_LAUNCH_ARGS[@]}" >> "$node_log" 2>&1 &
     echo $! > "$NODE_PID_FILE"
     info "Node started (PID $(cat "$NODE_PID_FILE")). Log: ${node_log}"
 

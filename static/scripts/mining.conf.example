@@ -30,13 +30,15 @@ MINER_LISTEN_PORT=9833
 CPU_WORKERS=0
 GPU_DEVICES=1
 
-# Pinned versions (set automatically during setup). Must be a matching pair —
-# do not mix independent GitHub latest tags. The setup script verifies both
-# binaries speak the same miner protocol (auth vs legacy).
+# Pinned versions. `setup` and `setup --force` download these tags.
+# Environment NODE_VERSION / MINER_VERSION override the file.
+# Leave empty to use GitHub latest (independent latest tags may not match).
+# After changing pins, re-run: ./quantus-mining.sh setup --force
 NODE_VERSION=""
 MINER_VERSION=""
 
 # Editable via: ./quantus-mining.sh config set KEY VALUE
-#   NODE_NAME, CPU_WORKERS, GPU_DEVICES, MINER_LISTEN_PORT, CHAIN
+#   NODE_NAME, CPU_WORKERS, GPU_DEVICES, MINER_LISTEN_PORT, CHAIN,
+#   NODE_VERSION, MINER_VERSION
 #
 # To change INNER_HASH / rewards destination, re-run setup wormhole keygen.

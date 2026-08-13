@@ -16,16 +16,40 @@ Mining commands and flags are aligned with chain MINING.md (https://github.com/Q
 
 **Critical architecture:** The node is the QUIC server (listens on port 9833 via `--miner-listen-port`). The external miner is the QUIC client (connects via `--node-addr`). Start the node first; wait for it to log that the miner server is listening before starting the miner. Node and miner versions must be a matching pair.
 
-**Miner protocol -- probe the binaries you actually downloaded.** Current GitHub `releases/latest` are pre-auth (node `v0.9.0-endless-sky`, miner `v3.3.1`). Do **not** wait for `miner-auth-token` or pass `--auth-token-file` unless **both** binaries advertise those flags:
+**Miner protocol -- probe the binaries you actually downloaded.** Current GitHub `releases/latest` are pre-auth (node `v0.9.0-endless-sky`, miner `v3.3.1`). Do **not** wait for `miner-auth-token` or pass `--auth-token-file` unless **both** binaries advertise those flags.
+
+Capture `--help` exit status first. A non-zero exit is a broken, quarantined, or wrong-architecture binary -- **stop** and fix it. Do **not** treat a failed probe as pre-auth (`*_auth=no`). Do not pipe `--help` into `grep` until the command itself exits 0.
 
 ```bash
-<quantus-node> --help | grep -q -- miner-auth-token-file && echo node_auth=yes || echo node_auth=no
-<quantus-miner> serve --help | grep -q -- auth-token-file && <quantus-miner> serve --help | grep -q -- tls-cert-sha256-file && echo miner_auth=yes || echo miner_auth=no
+node_help="$(./quantus-node --help 2>&1)" && node_status=0 || node_status=$?
+if [ "$node_status" -ne 0 ]; then
+  echo "quantus-node --help failed (exit ${node_status}). STOP. Do not classify as pre-auth."
+  printf '%s\n' "$node_help"
+  # abort setup — do not continue
+fi
+
+miner_help="$(./quantus-miner serve --help 2>&1)" && miner_status=0 || miner_status=$?
+if [ "$miner_status" -ne 0 ]; then
+  echo "quantus-miner serve --help failed (exit ${miner_status}). STOP. Do not classify as pre-auth."
+  printf '%s\n' "$miner_help"
+  # abort setup — do not continue
+fi
+
+printf '%s' "$node_help" | grep -q -- miner-auth-token-file && node_auth=yes || node_auth=no
+if printf '%s' "$miner_help" | grep -q -- auth-token-file \
+  && printf '%s' "$miner_help" | grep -q -- tls-cert-sha256-file; then
+  miner_auth=yes
+else
+  miner_auth=no
+fi
+echo "node_auth=${node_auth} miner_auth=${miner_auth}"
 ```
 
-- **Both no (today's latest):** wait only for "miner server listening"; start the miner with `--node-addr` only.
+Replace `./quantus-node` / `./quantus-miner` with the actual downloaded filenames. `/usr/bin/false` (or any failed `--help`) must abort here, not print `node_auth=no`.
+
+- **Both no, after successful `--help` (today's latest):** wait only for "miner server listening"; start the miner with `--node-addr` only.
 - **Both yes:** wait for `miner-auth-token` and `miner-tls-cert-sha256` under the chain directory, then pass `--auth-token-file` and `--tls-cert-sha256-file`. ALPN is `quantus-miner/2`.
-- **Mixed:** stop. Pin a matching pair (`NODE_VERSION` / `MINER_VERSION`); do not mix independent `releases/latest` tags.
+- **Mixed:** stop. Pin a matching pair (`NODE_VERSION` / `MINER_VERSION` in `mining.conf`, then `setup --force`); do not mix independent `releases/latest` tags.
 
 ## Step 1: Prerequisites Check
 
