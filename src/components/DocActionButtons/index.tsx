@@ -27,6 +27,7 @@ export default function DocActionButtons(): ReactNode {
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const location = useLocation();
   const skillUrl = useBaseUrl('/skills/mining-skill.md');
+  const compatibilityUrl = useBaseUrl('/mining-compatibility.json');
 
   const isMiningPage =
     location.pathname.replace(/\/$/, '') === MINING_PATH;
@@ -53,15 +54,30 @@ export default function DocActionButtons(): ReactNode {
 
     if (isMiningPage) {
       try {
-        const res = await fetch(skillUrl);
-        if (!res.ok) {
-          throw new Error(`Skill fetch returned ${res.status}`);
+        const [skillResponse, compatibilityResponse] = await Promise.all([
+          fetch(skillUrl),
+          fetch(compatibilityUrl),
+        ]);
+        if (!skillResponse.ok) {
+          throw new Error(`Skill fetch returned ${skillResponse.status}`);
         }
-        const skill = await res.text();
+        if (!compatibilityResponse.ok) {
+          throw new Error(
+            `Compatibility fetch returned ${compatibilityResponse.status}`,
+          );
+        }
+        const skill = await skillResponse.text();
+        const compatibility = await compatibilityResponse.text();
         text = [
           '<!-- Quantus mining context: AI agent skill followed by the full guide. -->',
           '<!-- Agents: follow the skill; the guide below is the human-facing reference. -->',
           skill.trim(),
+          '',
+          '## Pinned compatibility manifest',
+          '',
+          '```json',
+          compatibility.trim(),
+          '```',
           '',
           '---',
           '',
@@ -81,7 +97,7 @@ export default function DocActionButtons(): ReactNode {
     await copyTextToClipboard(text);
     setCopyState('copied');
     setTimeout(() => setCopyState('idle'), 2000);
-  }, [isMiningPage, skillUrl]);
+  }, [compatibilityUrl, isMiningPage, skillUrl]);
 
   if (!container) return null;
 

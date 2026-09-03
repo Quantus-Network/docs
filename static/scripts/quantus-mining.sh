@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# quantus-mining.sh — Set up and manage Quantus Planck testnet mining.
+# quantus-mining.sh - Set up and manage verified Quantus Planck testnet mining.
 #
 # Supports macOS, Linux, and WSL2. Requires bash, curl, and tar.
 #
@@ -8,11 +8,13 @@
 # Config file: ~/quantus-mining/mining.conf (mode 600)
 #
 # Usage:
+#   ./quantus-mining.sh mine
 #   ./quantus-mining.sh setup [--force]
 #   ./quantus-mining.sh config show|set KEY VALUE|edit
 #   ./quantus-mining.sh start [-d|--detach]
 #   ./quantus-mining.sh start-node|start-miner
 #   ./quantus-mining.sh stop|restart [-d|--detach]
+#   ./quantus-mining.sh status|restart-check
 #   ./quantus-mining.sh uninstall [--force]
 #   ./quantus-mining.sh help
 #
@@ -31,15 +33,23 @@ readonly MINER_BIN="${BIN_DIR}/quantus-miner"
 readonly NODE_PID_FILE="${MINING_DIR}/node.pid"
 readonly MINER_PID_FILE="${MINING_DIR}/miner.pid"
 readonly NODE_KEY_PATH="${MINING_DIR}/node_key.p2p"
+readonly INNER_HASH_FILE="${MINING_DIR}/rewards-inner-hash"
+readonly COMPATIBILITY_FILE="${MINING_DIR}/mining-compatibility.json"
+readonly COMPATIBILITY_URL="${QUANTUS_COMPATIBILITY_URL:-https://docs.quantus.com/mining-compatibility.json}"
 
 readonly CHAIN_REPO="Quantus-Network/chain"
 readonly MINER_REPO="Quantus-Network/quantus-miner"
-readonly EDITABLE_KEYS="NODE_NAME CPU_WORKERS GPU_DEVICES MINER_LISTEN_PORT CHAIN NODE_VERSION MINER_VERSION"
+readonly EDITABLE_KEYS="NODE_NAME CPU_WORKERS GPU_DEVICES MINER_LISTEN_PORT"
 
 OS=""
 ARCH=""
+PLATFORM_KEY=""
 NODE_TARGET=""
 MINER_ASSET=""
+NODE_DOWNLOAD_URL=""
+NODE_DOWNLOAD_SHA256=""
+MINER_DOWNLOAD_URL=""
+MINER_DOWNLOAD_SHA256=""
 DOCKER_COMPOSE=""
 NODE_LAUNCH_ARGS=()
 
@@ -78,9 +88,11 @@ detect_platform() {
     x86_64|amd64)
       ARCH="x86_64"
       if [ "$OS" = "linux" ]; then
+        PLATFORM_KEY="LinuxX8664"
         NODE_TARGET="x86_64-unknown-linux-gnu"
         MINER_ASSET="quantus-miner-linux-x86_64"
       else
+        PLATFORM_KEY="DarwinX8664"
         NODE_TARGET="x86_64-apple-darwin"
         MINER_ASSET="quantus-miner-macos-x86_64"
       fi
@@ -88,9 +100,11 @@ detect_platform() {
     arm64|aarch64)
       ARCH="arm64"
       if [ "$OS" = "linux" ]; then
+        PLATFORM_KEY="LinuxArm64"
         NODE_TARGET="aarch64-unknown-linux-gnu"
         MINER_ASSET=""
       else
+        PLATFORM_KEY="DarwinArm64"
         NODE_TARGET="aarch64-apple-darwin"
         MINER_ASSET="quantus-miner-macos-aarch64"
       fi
@@ -260,21 +274,116 @@ tolower() {
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
 }
 
-fetch_latest_tag() {
-  local repo="$1"
-  local release_json tag
+manifest_string() {
+  local file="$1" key="$2"
+  sed -n "s/^[[:space:]]*\"${key}\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\"[,[:space:]]*$/\1/p" "$file" \
+    | head -n 1
+}
 
-  release_json="$(curl -fsSL "https://api.github.com/repos/${repo}/releases/latest")" \
-    || die "Failed to fetch latest release for ${repo}"
+require_manifest_string() {
+  local file="$1" key="$2" value
+  value="$(manifest_string "$file" "$key")"
+  [ -n "$value" ] || die "Compatibility manifest is missing ${key}. No files were installed."
+  printf '%s' "$value"
+}
 
-  tag="$(printf '%s' "$release_json" | grep -o '"tag_name": "[^"]*"' | head -n 1 | cut -d'"' -f4)"
-  [ -n "$tag" ] || die "Could not determine latest release tag for ${repo}"
-  printf '%s' "$tag"
+sha256_file() {
+  local file="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$file" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{print $1}'
+  else
+    die "No SHA-256 tool found. Install sha256sum (Linux) or use macOS shasum, then retry."
+  fi
+}
+
+verify_sha256() {
+  local file="$1" expected="$2" actual
+  case "$expected" in
+    *[!0-9a-f]*|'') die "Invalid SHA-256 value for $(basename "$file"). No files were installed." ;;
+  esac
+  [ "${#expected}" -eq 64 ] \
+    || die "Invalid SHA-256 length for $(basename "$file"). No files were installed."
+
+  actual="$(sha256_file "$file")"
+  if [ "$actual" != "$expected" ]; then
+    die "Checksum verification failed for $(basename "$file").
+Expected: ${expected}
+Actual:   ${actual}
+The file was not installed. Delete the download and retry."
+  fi
+  info "Verified SHA-256: $(basename "$file")"
+}
+
+validate_release_url() {
+  local url="$1" repo="$2" version="$3"
+  case "$url" in
+    "https://github.com/${repo}/releases/download/${version}/"*) ;;
+    *) die "Compatibility manifest contains an unexpected download URL for ${repo}. No files were installed." ;;
+  esac
+}
+
+load_compatibility_manifest() {
+  local file="$1" status network_kind token_value evidence
+  local node_url_key node_sha_key miner_url_key miner_sha_key
+
+  [ -s "$file" ] || die "Compatibility manifest not found at ${file}. Run: ${SCRIPT_NAME} setup --force"
+
+  status="$(require_manifest_string "$file" status)"
+  [ "$status" = "supported" ] \
+    || die "Mining compatibility status is '${status}', not 'supported'. Nothing will be installed or started."
+
+  CHAIN="$(require_manifest_string "$file" networkId)"
+  network_kind="$(require_manifest_string "$file" networkKind)"
+  token_value="$(require_manifest_string "$file" tokenValue)"
+  NODE_VERSION="$(require_manifest_string "$file" nodeVersion)"
+  MINER_VERSION="$(require_manifest_string "$file" minerVersion)"
+  MINER_PROTOCOL="$(require_manifest_string "$file" minerProtocol)"
+  evidence="$(require_manifest_string "$file" compatibilityEvidenceUrl)"
+
+  [ "$CHAIN" = "planck" ] && [ "$network_kind" = "testnet" ] && [ "$token_value" = "none" ] \
+    || die "This installer is restricted to the Planck testnet. The manifest requested a different network."
+  [ "$MINER_PROTOCOL" = "quantus-miner/2" ] \
+    || die "Unsupported miner protocol '${MINER_PROTOCOL}'. Nothing will be installed or started."
+  case "$evidence" in
+    https://github.com/Quantus-Network/quantus-miner/releases/tag/*) ;;
+    *) die "Compatibility evidence URL is not an official Quantus miner release." ;;
+  esac
+
+  node_url_key="node${PLATFORM_KEY}Url"
+  node_sha_key="node${PLATFORM_KEY}Sha256"
+  miner_url_key="miner${PLATFORM_KEY}Url"
+  miner_sha_key="miner${PLATFORM_KEY}Sha256"
+  NODE_DOWNLOAD_URL="$(require_manifest_string "$file" "$node_url_key")"
+  NODE_DOWNLOAD_SHA256="$(require_manifest_string "$file" "$node_sha_key")"
+  MINER_DOWNLOAD_URL="$(require_manifest_string "$file" "$miner_url_key")"
+  MINER_DOWNLOAD_SHA256="$(require_manifest_string "$file" "$miner_sha_key")"
+
+  validate_release_url "$NODE_DOWNLOAD_URL" "$CHAIN_REPO" "$NODE_VERSION"
+  validate_release_url "$MINER_DOWNLOAD_URL" "$MINER_REPO" "$MINER_VERSION"
+  case "$(basename "$NODE_DOWNLOAD_URL")" in
+    "quantus-node-${NODE_VERSION}-${NODE_TARGET}.tar.gz") ;;
+    *) die "Node asset does not match ${OS}/${ARCH}. No files were installed." ;;
+  esac
+  [ "$(basename "$MINER_DOWNLOAD_URL")" = "$MINER_ASSET" ] \
+    || die "Miner asset does not match ${OS}/${ARCH}. No files were installed."
+}
+
+fetch_compatibility_manifest() {
+  local temp_file="${COMPATIBILITY_FILE}.download"
+  info "Fetching the supported Planck release pair..."
+  curl --proto '=https' --tlsv1.2 -fsSL "$COMPATIBILITY_URL" -o "$temp_file" \
+    || die "Could not download ${COMPATIBILITY_URL}. Check your connection and retry."
+  load_compatibility_manifest "$temp_file"
+  mv "$temp_file" "$COMPATIBILITY_FILE"
+  chmod 600 "$COMPATIBILITY_FILE"
+  info "Supported pair: node ${NODE_VERSION} + miner ${MINER_VERSION} (${MINER_PROTOCOL})"
 }
 
 # Miner protocol this script can drive:
 #   auth   = Ready { token } + TLS pin (quantus-miner/2)
-#   legacy = unauthenticated Ready (pre-auth releases, e.g. node v0.9.0 / miner v3.3.1)
+#   legacy = unauthenticated Ready from older release pairs
 MINER_PROTOCOL=""
 
 incompatible_miner_pair_die() {
@@ -284,14 +393,8 @@ incompatible_miner_pair_die() {
   Miner --auth-token-file / --tls-cert-sha256-file: ${miner_auth}
 
 Do not mix a release that requires Ready { token } (quantus-miner/2) with one that does not.
-GitHub latest tags are published independently — pin a matching pair:
-
-  NODE_VERSION=<chain-tag>
-  MINER_VERSION=<miner-tag>
-
-in ${CONFIG_FILE}, or re-run setup after coordinated releases:
-  https://github.com/${CHAIN_REPO}/releases
-  https://github.com/${MINER_REPO}/releases"
+Run ${SCRIPT_NAME} setup --force to reinstall the supported pair from:
+  ${COMPATIBILITY_URL}"
 }
 
 classify_miner_protocol() {
@@ -342,18 +445,22 @@ maybe_wait_for_miner_auth_files() {
 }
 
 download_node_binary() {
-  local tag="$1"
-  local asset="quantus-node-${tag}-${NODE_TARGET}.tar.gz"
-  local url="https://github.com/${CHAIN_REPO}/releases/download/${tag}/${asset}"
+  local tag="$1" url="$2" expected_sha256="$3"
+  local asset
   local temp_dir asset_path
+
+  asset="$(basename "$url")"
 
   info "Downloading quantus-node ${tag} for ${NODE_TARGET}..."
   temp_dir="$(mktemp -d)"
 
   asset_path="${temp_dir}/${asset}"
-  curl -fsSL "$url" -o "$asset_path" || { rm -rf "$temp_dir"; die "Failed to download ${url}"; }
+  curl --proto '=https' --tlsv1.2 -fsSL "$url" -o "$asset_path" \
+    || { rm -rf "$temp_dir"; die "Failed to download ${url}"; }
+  verify_sha256 "$asset_path" "$expected_sha256"
 
-  tar -xzf "$asset_path" -C "$temp_dir"
+  tar -xzf "$asset_path" -C "$temp_dir" \
+    || { rm -rf "$temp_dir"; die "Could not extract ${asset}. Delete the download and retry."; }
   if [ ! -f "${temp_dir}/quantus-node" ]; then
     rm -rf "$temp_dir"
     die "quantus-node not found in archive"
@@ -366,162 +473,81 @@ download_node_binary() {
 }
 
 download_miner_binary() {
-  local tag="$1"
-  local url="https://github.com/${MINER_REPO}/releases/download/${tag}/${MINER_ASSET}"
+  local tag="$1" url="$2" expected_sha256="$3"
+  local temp_file
 
   info "Downloading quantus-miner ${tag} (${MINER_ASSET})..."
-  curl -fsSL "$url" -o "$MINER_BIN" || die "Failed to download ${url}"
+  temp_file="${MINER_BIN}.download"
+  curl --proto '=https' --tlsv1.2 -fsSL "$url" -o "$temp_file" \
+    || die "Failed to download ${url}"
+  verify_sha256 "$temp_file" "$expected_sha256"
+  mv "$temp_file" "$MINER_BIN"
   make_executable "$MINER_BIN"
   info "Installed quantus-miner to ${MINER_BIN}"
 }
 
-read_conf_value() {
-  local key="$1"
-  local raw=""
-  [ -f "$CONFIG_FILE" ] || return 0
-  raw="$(grep -E "^${key}=" "$CONFIG_FILE" 2>/dev/null | head -n 1 | cut -d= -f2- || true)"
-  raw="${raw#\"}"
-  raw="${raw%\"}"
-  printf '%s' "$raw"
-}
-
-# Env NODE_VERSION / MINER_VERSION override mining.conf. Empty pins fetch GitHub latest.
-load_version_pins() {
-  local conf_node conf_miner
-  conf_node="$(read_conf_value NODE_VERSION)"
-  conf_miner="$(read_conf_value MINER_VERSION)"
-  if [ -z "${NODE_VERSION:-}" ] && [ -n "$conf_node" ]; then
-    NODE_VERSION="$conf_node"
-  fi
-  if [ -z "${MINER_VERSION:-}" ] && [ -n "$conf_miner" ]; then
-    MINER_VERSION="$conf_miner"
-  fi
-}
-
 download_binaries() {
-  local force="${1:-false}"
-  local node_tag miner_tag
-
-  load_version_pins
-
-  if [ "$force" = "true" ] || [ ! -x "$NODE_BIN" ]; then
-    node_tag="${NODE_VERSION:-}"
-    [ -n "$node_tag" ] || node_tag="$(fetch_latest_tag "$CHAIN_REPO")"
-    download_node_binary "$node_tag"
-  else
-    node_tag="${NODE_VERSION:-}"
-    [ -n "$node_tag" ] || node_tag="$(fetch_latest_tag "$CHAIN_REPO")"
-    info "Using existing quantus-node at ${NODE_BIN}"
-  fi
-
-  if [ "$force" = "true" ] || [ ! -x "$MINER_BIN" ]; then
-    miner_tag="${MINER_VERSION:-}"
-    [ -n "$miner_tag" ] || miner_tag="$(fetch_latest_tag "$MINER_REPO")"
-    download_miner_binary "$miner_tag"
-  else
-    miner_tag="${MINER_VERSION:-}"
-    [ -n "$miner_tag" ] || miner_tag="$(fetch_latest_tag "$MINER_REPO")"
-    info "Using existing quantus-miner at ${MINER_BIN}"
-  fi
-
-  NODE_VERSION="$node_tag"
-  MINER_VERSION="$miner_tag"
+  fetch_compatibility_manifest
+  download_node_binary "$NODE_VERSION" "$NODE_DOWNLOAD_URL" "$NODE_DOWNLOAD_SHA256"
+  download_miner_binary "$MINER_VERSION" "$MINER_DOWNLOAD_URL" "$MINER_DOWNLOAD_SHA256"
   detect_binary_miner_protocol
+  [ "$MINER_PROTOCOL" = "auth" ] \
+    || die "The downloaded binaries do not implement the manifest protocol quantus-miner/2. Nothing will be started."
 }
 
 parse_wormhole_output() {
   local output="$1"
-  local line
 
   WORMHOLE_ADDRESS="$(printf '%s\n' "$output" | grep -E '^Address:' | head -n 1 | awk '{print $2}')"
   INNER_HASH="$(printf '%s\n' "$output" | grep -E '^Inner [Hh]ash:' | head -n 1 | awk '{print $3}')"
   if [ -z "$INNER_HASH" ]; then
     INNER_HASH="$(printf '%s\n' "$output" | grep -E '^inner_hash:' | head -n 1 | awk '{print $2}')"
   fi
-  WORMHOLE_SECRET=""
-  line="$(printf '%s\n' "$output" | grep -E '^Secret:' | head -n 1 || true)"
-  if [ -n "$line" ]; then
-    WORMHOLE_SECRET="$(printf '%s' "$line" | awk '{print $2}')"
-  fi
-
-  line="$(printf '%s\n' "$output" | grep -E '^Secret phrase:' | head -n 1 || true)"
-  if [ -n "$line" ]; then
-    WORMHOLE_SECRET_PHRASE="${line#*Secret phrase: }"
-  else
-    WORMHOLE_SECRET_PHRASE=""
-  fi
-
   [ -n "$WORMHOLE_ADDRESS" ] || die "Could not parse wormhole Address from keygen output"
   [ -n "$INNER_HASH" ] || die "Could not parse Inner Hash from keygen output"
 }
 
 generate_wormhole_keys() {
-  local choice output mnemonic
+  local output mnemonic
 
   echo ""
-  echo "Wormhole address generation:"
-  echo "  [1] Derive from existing 24-word wallet mnemonic (recommended)"
-  echo "  [2] Generate a fresh keypair"
-  read -r -p "Enter choice (1/2) [1]: " choice
-  choice="${choice:-1}"
-
-  case "$choice" in
-    1)
-      echo "Enter your 24-word mnemonic (input hidden):"
-      read -r -s mnemonic
-      echo ""
-      [ -n "$mnemonic" ] || die "Mnemonic cannot be empty"
-      output="$(printf '%s\n' "$mnemonic" | wormhole_keygen --words)"
-      ;;
-    2)
-      output="$(wormhole_keygen)"
-      ;;
-    *)
-      die "Invalid choice: $choice"
-      ;;
-  esac
+  info "Wallet step: enter your existing Quantus 24-word recovery phrase locally."
+  info "Input is hidden and is not written to disk, logs, command arguments, or network requests."
+  info "Never paste a recovery phrase into chat or a support ticket."
+  read -r -s -p "Recovery phrase: " mnemonic
+  echo ""
+  [ -n "$mnemonic" ] || die "Recovery phrase cannot be empty. Open your Quantus wallet backup and retry."
+  output="$(printf '%s\n' "$mnemonic" | wormhole_keygen --words)"
+  unset mnemonic
 
   parse_wormhole_output "$output"
+  unset output
+
+  printf '%s\n' "$INNER_HASH" > "$INNER_HASH_FILE"
+  chmod 600 "$INNER_HASH_FILE"
 
   echo ""
-  echo "Wormhole keypair generated. Save these values securely:"
-  echo "$output"
-  echo ""
-  warn "Back up your 24-word seed phrase. Loss means loss of mining rewards."
+  info "Reward address: ${WORMHOLE_ADDRESS}"
+  info "Your recovery phrase was not saved. Keep your existing offline backup."
 }
 
-prompt_resource_allocation() {
-  local cores has_gpu choice default_workers
+configure_resource_defaults() {
+  local cores default_workers
 
   cores="$(cpu_count)"
-  echo ""
-  echo "This machine has ${cores} CPU cores."
-  echo "GPU mining is strongly recommended (~500-1000 MH/s vs ~15 MH/s per CPU worker)."
-  read -r -p "Do you have a GPU available for mining? (y/N): " has_gpu
+  default_workers=$((cores - 2))
+  [ "$default_workers" -lt 1 ] && default_workers=1
 
-  case "$(tolower "$has_gpu")" in
-    y|yes)
-      GPU_DEVICES=1
-      CPU_WORKERS=0
-      info "Default: GPU mining with --gpu-devices 1 --cpu-workers 0"
-      ;;
-    *)
-      default_workers=$((cores - 2))
-      [ "$default_workers" -lt 1 ] && default_workers=1
-      GPU_DEVICES=0
-      CPU_WORKERS="$default_workers"
-      info "Default: CPU-only mining with --cpu-workers ${CPU_WORKERS} (leaving 2 cores for OS/node)"
-      ;;
-  esac
-
-  read -r -p "CPU workers [${CPU_WORKERS}]: " choice
-  if [ -n "$choice" ]; then
-    CPU_WORKERS="$choice"
-  fi
-
-  read -r -p "GPU devices [${GPU_DEVICES}]: " choice
-  if [ -n "$choice" ]; then
-    GPU_DEVICES="$choice"
+  if [ "$OS" = "macos" ] \
+    || command -v nvidia-smi >/dev/null 2>&1 \
+    || command -v vulkaninfo >/dev/null 2>&1; then
+    GPU_DEVICES=1
+    CPU_WORKERS=0
+    info "Mining resources: one detected GPU, CPU reserved for the node."
+  else
+    GPU_DEVICES=0
+    CPU_WORKERS="$default_workers"
+    info "Mining resources: ${CPU_WORKERS} CPU workers, two cores reserved when available."
   fi
 }
 
@@ -532,12 +558,11 @@ write_config() {
   GPU_DEVICES="${GPU_DEVICES:-0}"
 
   cat > "$CONFIG_FILE" <<EOF
-# Quantus mining configuration — ${CONFIG_FILE}
+# Quantus mining configuration - ${CONFIG_FILE}
 # Generated by ${SCRIPT_NAME} setup
 
 RUN_MODE="binary"
 NODE_NAME="${NODE_NAME}"
-INNER_HASH="${INNER_HASH}"
 WORMHOLE_ADDRESS="${WORMHOLE_ADDRESS}"
 NODE_KEY_FILE="node_key.p2p"
 CHAIN="${CHAIN}"
@@ -559,7 +584,10 @@ load_config() {
 
   RUN_MODE="${RUN_MODE:-binary}"
   : "${NODE_NAME:?NODE_NAME missing in config}"
-  : "${INNER_HASH:?INNER_HASH missing in config}"
+  [ -s "$INNER_HASH_FILE" ] \
+    || die "Reward preimage file is missing. Re-run ${SCRIPT_NAME} setup --force and enter the phrase locally."
+  INNER_HASH="$(tr -d '[:space:]' < "$INNER_HASH_FILE")"
+  [ -n "$INNER_HASH" ] || die "Reward preimage file is empty. Re-run ${SCRIPT_NAME} setup --force."
   NODE_KEY_FILE="${NODE_KEY_FILE:-node_key.p2p}"
   CHAIN="${CHAIN:-planck}"
   MINER_LISTEN_PORT="${MINER_LISTEN_PORT:-9833}"
@@ -874,14 +902,15 @@ validate_editable_key() {
 
 cmd_help() {
   cat <<EOF
-${SCRIPT_NAME} — Set up and manage Quantus Planck testnet mining.
+${SCRIPT_NAME} - Set up and manage verified Quantus Planck testnet mining.
 
 Working directory: ${MINING_DIR}
 Config file:       ${CONFIG_FILE}
 
 Commands:
+  mine                      Set up if needed, start in background, and show status
   setup [--force]           Interactive setup: download binaries, generate keys, write config
-  config show               Show current config (inner hash masked)
+  config show               Show non-secret configuration
   config set KEY VALUE      Update an editable config key
   config edit               Open config in \$EDITOR
   start [-d|--detach]       Start node + miner
@@ -889,6 +918,8 @@ Commands:
   start-miner               Start only the miner (node must already be running)
   stop                      Stop node, miner, and related helper processes
   restart [-d|--detach]     Stop then start
+  restart-check             Restart in background and verify both processes
+  status                    Show a redacted mining readiness summary
   uninstall [--force]       Stop processes and remove ${MINING_DIR} (config, keys, binaries, logs)
   help                      Show this help
 
@@ -897,8 +928,7 @@ Editable config keys: ${EDITABLE_KEYS}
 Environment:
   QUANTUS_MINING_DIR        Override default working directory (${DEFAULT_MINING_DIR})
   QUANTUS_NODE_DATA_PATH    Node --base-path (default: Substrate quantus-node data dir)
-  NODE_VERSION / MINER_VERSION
-                            Pin a matching node/miner pair (env overrides mining.conf; used by setup / setup --force)
+  QUANTUS_COMPATIBILITY_URL Official compatibility manifest (${COMPATIBILITY_URL})
 EOF
 }
 
@@ -950,16 +980,17 @@ cmd_setup() {
     info "Using existing node key at ${NODE_KEY_PATH}"
   fi
 
-  read -r -p "Enter a node name (shown on telemetry): " NODE_NAME
-  [ -n "$NODE_NAME" ] || die "Node name cannot be empty"
+  NODE_NAME="quantus-$(hostname 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-' | cut -c1-24)"
+  [ "$NODE_NAME" != "quantus-" ] || NODE_NAME="quantus-miner"
+  info "Node name: ${NODE_NAME}"
 
   generate_wormhole_keys
-  prompt_resource_allocation
+  configure_resource_defaults
   write_config
 
   echo ""
   info "Setup complete."
-  info "Start mining with: ${SCRIPT_NAME} start"
+  info "Start mining with: ${SCRIPT_NAME} mine"
   info "Telemetry dashboard: https://telemetry.quantus.cat/"
 }
 
@@ -973,11 +1004,6 @@ cmd_config() {
       while IFS= read -r line || [ -n "$line" ]; do
         case "$line" in
           \#*|"") echo "$line" ;;
-          INNER_HASH=*)
-            local val="${line#INNER_HASH=}"
-            val="${val#\"}"; val="${val%\"}"
-            echo "INNER_HASH=\"$(mask_hash "$val")\""
-            ;;
           *) echo "$line" ;;
         esac
       done < "$CONFIG_FILE"
@@ -994,17 +1020,9 @@ cmd_config() {
         CPU_WORKERS) CPU_WORKERS="$value" ;;
         GPU_DEVICES) GPU_DEVICES="$value" ;;
         MINER_LISTEN_PORT) MINER_LISTEN_PORT="$value" ;;
-        CHAIN) CHAIN="$value" ;;
-        NODE_VERSION) NODE_VERSION="$value" ;;
-        MINER_VERSION) MINER_VERSION="$value" ;;
       esac
       write_config
       info "Updated ${key}=${value}"
-      case "$key" in
-        NODE_VERSION|MINER_VERSION)
-          info "Re-run ${SCRIPT_NAME} setup --force to download that pair."
-          ;;
-      esac
       ;;
     edit)
       [ -f "$CONFIG_FILE" ] || die "Config not found. Run: ${SCRIPT_NAME} setup"
@@ -1020,6 +1038,7 @@ cmd_config() {
 }
 
 ensure_start_prerequisites() {
+  local installed_node_version installed_miner_version installed_chain
   load_config
   ensure_dirs
 
@@ -1028,7 +1047,20 @@ ensure_start_prerequisites() {
 Then re-run: ${SCRIPT_NAME} setup --force"
   fi
 
+  installed_node_version="${NODE_VERSION:-}"
+  installed_miner_version="${MINER_VERSION:-}"
+  installed_chain="${CHAIN:-}"
   detect_platform
+  load_compatibility_manifest "$COMPATIBILITY_FILE"
+
+  if [ "$installed_node_version" != "$NODE_VERSION" ] \
+    || [ "$installed_miner_version" != "$MINER_VERSION" ] \
+    || [ "$installed_chain" != "$CHAIN" ]; then
+    die "Installed mining files do not match the supported manifest.
+Installed: node ${installed_node_version:-unknown} + miner ${installed_miner_version:-unknown} on ${installed_chain:-unknown}
+Required:  node ${NODE_VERSION} + miner ${MINER_VERSION} on ${CHAIN}
+Run: ${SCRIPT_NAME} setup --force"
+  fi
   [ -x "$NODE_BIN" ] || die "quantus-node not found at ${NODE_BIN}. Run: ${SCRIPT_NAME} setup"
   [ -x "$MINER_BIN" ] || die "quantus-miner not found at ${MINER_BIN}. Run: ${SCRIPT_NAME} setup"
 
@@ -1219,6 +1251,99 @@ cmd_start() {
   stop_foreground_stack "$node_pid" "$miner_pid" "$tail_pid"
 }
 
+redact_sensitive_stream() {
+  sed -E \
+    -e 's/(recovery phrase|seed phrase|mnemonic|private key|inner hash|auth token)([=:][[:space:]]*|[[:space:]]+)[^[:space:]]+/\1: [redacted]/Ig' \
+    -e 's/0x[0-9a-fA-F]{64}/[redacted-hex]/g' \
+    -e 's/[0-9a-fA-F]{64}/[redacted-hex]/g'
+}
+
+cmd_status() {
+  local node_pid miner_pid node_state="Stopped" miner_state="Stopped"
+  local sync_state="Unknown" hash_rate="Waiting for miner output"
+  local health="" latest_rate="" overall="STARTING"
+
+  [ -f "$CONFIG_FILE" ] || die "Mining is not configured. Run: ${SCRIPT_NAME} mine"
+  # shellcheck source=/dev/null
+  source "$CONFIG_FILE"
+
+  node_pid="$(read_pid_file "$NODE_PID_FILE")"
+  miner_pid="$(read_pid_file "$MINER_PID_FILE")"
+  process_alive "$node_pid" && node_state="Running"
+  process_alive "$miner_pid" && miner_state="Running"
+
+  if health="$(curl --max-time 2 -fsS -H 'Content-Type: application/json' \
+    -d '{"jsonrpc":"2.0","id":1,"method":"system_health","params":[]}' \
+    http://127.0.0.1:9944 2>/dev/null)"; then
+    case "$health" in
+      *'"isSyncing":false'*) sync_state="Synced" ;;
+      *'"isSyncing":true'*) sync_state="Syncing" ;;
+    esac
+  fi
+
+  if [ -f "${LOG_DIR}/miner.log" ]; then
+    latest_rate="$(grep -Ei 'hash.?rate|[0-9]+([.][0-9]+)?[[:space:]]*[kmg]?h/s' "${LOG_DIR}/miner.log" 2>/dev/null \
+      | tail -n 1 | redact_sensitive_stream || true)"
+    [ -z "$latest_rate" ] || hash_rate="$latest_rate"
+  fi
+
+  if [ "$node_state" = "Running" ] && [ "$miner_state" = "Running" ] \
+    && [ "$sync_state" = "Synced" ] && [ -n "$latest_rate" ]; then
+    overall="MINING"
+  elif [ "$node_state" = "Stopped" ] || [ "$miner_state" = "Stopped" ]; then
+    overall="STOPPED"
+  fi
+
+  cat <<EOF
+
+Quantus mining status
+Overall:          ${overall}
+Network:          Planck testnet (tokens have no monetary value)
+Compatibility:    node ${NODE_VERSION:-unknown} + miner ${MINER_VERSION:-unknown}
+Node:             ${node_state}
+Sync:             ${sync_state}
+Miner:            ${miner_state}
+Hash rate:        ${hash_rate}
+Reward address:   ${WORMHOLE_ADDRESS:-not configured}
+Node name:        ${NODE_NAME:-unknown}
+Telemetry:        https://telemetry.quantus.cat/ (search for ${NODE_NAME:-your node name})
+Restart recovery: Run ${SCRIPT_NAME} restart-check
+EOF
+
+  case "$overall" in
+    MINING) info "Success: the node is synced and the miner is reporting hash rate." ;;
+    STOPPED) info "Recovery: run ${SCRIPT_NAME} mine to start the verified pair." ;;
+    *) info "Recovery: wait for sync, then run ${SCRIPT_NAME} status again." ;;
+  esac
+}
+
+cmd_mine() {
+  if [ ! -f "$CONFIG_FILE" ]; then
+    cmd_setup
+  fi
+
+  if ! mining_stack_running; then
+    cmd_start --detach
+  fi
+  cmd_status
+}
+
+cmd_restart_check() {
+  [ -f "$CONFIG_FILE" ] || die "Mining is not configured. Run: ${SCRIPT_NAME} mine"
+  cmd_stop
+  cmd_start --detach
+
+  local node_pid miner_pid
+  node_pid="$(read_pid_file "$NODE_PID_FILE")"
+  miner_pid="$(read_pid_file "$MINER_PID_FILE")"
+  if process_alive "$node_pid" && process_alive "$miner_pid"; then
+    info "Restart recovery: PASSED"
+    cmd_status
+    return 0
+  fi
+  die "Restart recovery failed. Run ${SCRIPT_NAME} status, then apply the single recovery action shown."
+}
+
 cmd_stop() {
   local stopped=false
 
@@ -1303,7 +1428,8 @@ cmd_uninstall() {
   if [ "$force" != "true" ]; then
     echo ""
     warn "This permanently removes ${MINING_DIR}, including:"
-    echo "  - mining.conf (inner hash and wormhole address)"
+    echo "  - mining.conf (public settings and reward address)"
+    echo "  - rewards-inner-hash (owner-only reward preimage)"
     echo "  - node_key.p2p"
     echo "  - downloaded binaries and logs"
     if docker_stack_present || [ "${RUN_MODE:-}" = "docker" ]; then
@@ -1364,6 +1490,7 @@ main() {
   shift || true
 
   case "$cmd" in
+    mine) cmd_mine "$@" ;;
     setup) cmd_setup "$@" ;;
     config) cmd_config "$@" ;;
     start) cmd_start "$@" ;;
@@ -1371,10 +1498,14 @@ main() {
     start-miner) cmd_start_miner "$@" ;;
     stop) cmd_stop "$@" ;;
     restart) cmd_restart "$@" ;;
+    restart-check) cmd_restart_check "$@" ;;
+    status) cmd_status "$@" ;;
     uninstall) cmd_uninstall "$@" ;;
     help|-h|--help) cmd_help ;;
     *) die "Unknown command: ${cmd}. Run: ${SCRIPT_NAME} help" ;;
   esac
 }
 
-main "$@"
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  main "$@"
+fi
