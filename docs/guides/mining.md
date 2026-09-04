@@ -5,9 +5,19 @@ title: Mining and Running a Node
 
 # Mining and Running a Node
 
-This guide covers connecting to the Quantus Planck testnet and mining. Works on macOS and Linux (including WSL2 on Windows).
+This guide covers connecting to the Quantus Planck testnet and mining. The setup script below runs on macOS and Linux, including WSL2 on Windows.
+
+**On Windows without WSL2?** Use the [Miner App](https://github.com/Quantus-Network/quantus-apps/releases/latest) (`quantus_miner_windows.zip`) instead. It is a desktop app that downloads the node for you and handles identity, mining, and rewards in one window, with no terminal.
 
 Use the **Copy Context** button at the top of this page to copy everything as Markdown -- the full guide plus an AI mining skill. Paste it to an agent like Claude Code to be walked through setup interactively, or keep it as an offline reference.
+
+If you use Claude Code, install the skill from disk in one command instead of pasting:
+
+```bash
+mkdir -p ~/.claude/skills/mining && curl -fsSL https://docs.quantus.com/skills/mining-skill.md -o ~/.claude/skills/mining/SKILL.md
+```
+
+Then run `/mining`. The skill walks the same steps as this guide, and it probes the binaries you actually downloaded before starting anything, so it will not hand you a mismatched node and miner pair.
 
 ## Prerequisites
 
