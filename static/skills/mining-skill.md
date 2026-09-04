@@ -16,7 +16,7 @@ Mining commands and flags are aligned with chain MINING.md (https://github.com/Q
 
 **Critical architecture:** The node is the QUIC server (listens on port 9833 via `--miner-listen-port`). The external miner is the QUIC client (connects via `--node-addr`). Start the node first; wait for it to log that the miner server is listening before starting the miner. Node and miner versions must be a matching pair.
 
-**Miner protocol -- probe the binaries you actually downloaded.** Current GitHub `releases/latest` are pre-auth (node `v0.9.0-endless-sky`, miner `v3.3.1`). Do **not** wait for `miner-auth-token` or pass `--auth-token-file` unless **both** binaries advertise those flags.
+**Miner protocol -- probe the binaries you actually downloaded.** As of 2026-09-03, GitHub `releases/latest` are auth-era (node `v0.10.0`, miner `v4.0.2`); node `v0.9.0-endless-sky` / miner `v3.3.1` and earlier are pre-auth. Do **not** wait for `miner-auth-token` or pass `--auth-token-file` unless **both** binaries advertise those flags.
 
 Capture `--help` exit status first. A non-zero exit is a broken, quarantined, or wrong-architecture binary -- **stop** and fix it. Do **not** treat a failed probe as pre-auth (`*_auth=no`). Do not pipe `--help` into `grep` until the command itself exits 0.
 
@@ -49,7 +49,7 @@ echo "node_auth=${node_auth} miner_auth=${miner_auth}"
 
 Replace `./quantus-node` / `./quantus-miner` with the actual downloaded filenames. `/usr/bin/false` (or any failed `--help`) must exit 1 here and must not print `node_auth=no`.
 
-- **Both no, after successful `--help` (today's latest):** wait only for "miner server listening"; start the miner with `--node-addr` only.
+- **Both no, after successful `--help` (pre-auth pair):** wait only for "miner server listening"; start the miner with `--node-addr` only.
 - **Both yes:** wait for `miner-auth-token` and `miner-tls-cert-sha256` under the chain directory, then pass `--auth-token-file` and `--tls-cert-sha256-file`. ALPN is `quantus-miner/2`.
 - **Mixed:** stop. Pin a matching pair (`NODE_VERSION` / `MINER_VERSION` in `mining.conf`, then `setup --force`); do not mix independent `releases/latest` tags.
 
