@@ -11,11 +11,21 @@ This guide covers connecting to the Quantus Planck testnet and mining. The setup
 
 Use the **Copy Context** button at the top of this page to copy everything as Markdown -- the full guide plus an AI mining skill. Paste it to an agent like Claude Code to be walked through setup interactively, or keep it as an offline reference.
 
-If you use Claude Code, install the skill from disk in one command instead of pasting:
+If you use Claude Code, install the skill from disk in one command instead of pasting.
+
+macOS, Linux, or Git Bash on Windows:
 
 ```bash
 mkdir -p ~/.claude/skills/mining && curl -fsSL https://docs.quantus.com/skills/mining-skill.md -o ~/.claude/skills/mining/SKILL.md
 ```
+
+Windows PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force "$HOME\.claude\skills\mining" | Out-Null; curl.exe -fsSL https://docs.quantus.com/skills/mining-skill.md -o "$HOME\.claude\skills\mining\SKILL.md"
+```
+
+The PowerShell version is not a style preference. Windows PowerShell 5.1, still the default on Windows, treats `&&` as a parser error and aliases `curl` to `Invoke-WebRequest`, which does not accept `-fsSL`. Calling `curl.exe` explicitly and separating with `;` works on both 5.1 and PowerShell 7.
 
 Then run `/mining`. The skill walks the same steps as this guide, and it probes the binaries you actually downloaded before starting anything, so it will not hand you a mismatched node and miner pair.
 
