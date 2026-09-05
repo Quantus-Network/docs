@@ -1,0 +1,7 @@
+# Published installers and their checksum files must be byte-identical on
+# every checkout. A Windows clone with core.autocrlf=true would otherwise turn
+# LF into CRLF, break the published SHA-256, and fail the byte-exact tests.
+static/scripts/*.sh text eol=lf
+static/scripts/*.ps1 text eol=lf
+static/scripts/*.sha256 text eol=lf
+static/mining-compatibility.json text eol=lf

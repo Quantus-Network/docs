@@ -1,55 +1,71 @@
 ---
 sidebar_position: 2
-title: Miner App (GUI)
-draft: true
+title: Miner App Preview
 ---
 
-# Miner App
+# Miner App Preview
 
-The Quantus Miner App is the easiest way to start mining. It provides a graphical interface for both CPU and GPU mining -- no terminal required.
+The Quantus Miner App provides one desktop interface for wallet setup, node sync, CPU or GPU mining, hash rate, and rewards. Release `miner-v0.6.1` is a **preview**, not the verified beginner path.
 
-## Download
+The app downloads and starts node and miner binaries at runtime. It does not bundle them, pin the shared compatibility manifest, or verify their release checksums in this release. Use a dedicated Planck testnet wallet and do not use the app for assets with monetary value.
 
-Download the latest Miner App for your platform from [GitHub Releases](https://github.com/Quantus-Network/quantus-apps/releases/latest):
+## Direct downloads
 
-| Platform | File |
-|----------|------|
-| macOS (Intel / Apple Silicon) | `quantus_miner_macos.zip` |
-| Linux (x64) | `quantus_miner_linux.tar.gz` |
-| Windows (x64) | `quantus_miner_windows.zip` |
+| Platform | Download | SHA-256 |
+| --- | --- | --- |
+| Windows x64 | [quantus_miner_windows.zip](https://github.com/Quantus-Network/quantus-apps/releases/download/miner-v0.6.1/quantus_miner_windows.zip) | `081308152ba6f9eba62b9ac143f8c9e115ffab400a978a9d03a996e55ece8ad1` |
+| macOS | [quantus_miner_macos.zip](https://github.com/Quantus-Network/quantus-apps/releases/download/miner-v0.6.1/quantus_miner_macos.zip) | `fb4769d4c1e8ccd3c480e0caeca07c9baa2b3ef0540828894dddeea3d4ed016e` |
+| Linux x64 | [quantus_miner_linux.tar.gz](https://github.com/Quantus-Network/quantus-apps/releases/download/miner-v0.6.1/quantus_miner_linux.tar.gz) | `fd2755f2fe5df05af3deb8e1081fa808f6c872bd9d4bf2853eea0fe354655076` |
 
-## Prerequisites
+These URLs and hashes are also recorded in the [compatibility manifest](/mining-compatibility.json).
 
-Before you start mining, you need:
+Verify the downloaded archive before opening it.
 
-1. A Quantus wallet address to receive rewards. Download the Quantus mobile wallet from [quantus.com/wallet](https://www.quantus.com/wallet/) and create an account.
+### Windows PowerShell
 
-## Installation
+```powershell
+(Get-FileHash .\quantus_miner_windows.zip -Algorithm SHA256).Hash.ToLower()
+# Expected: 081308152ba6f9eba62b9ac143f8c9e115ffab400a978a9d03a996e55ece8ad1
+```
 
-**macOS:** Download the `.zip` file, extract it into your desired directory, and run `Quantus Miner.app`. If macOS blocks the app, go to System Settings > Privacy & Security and click "Open Anyway."
+### macOS Terminal
 
-**Linux:** Download the `.tar.gz` file, extract it into your desired directory, and run the `quantus_miner` executable.
+```bash
+shasum -a 256 quantus_miner_macos.zip
+# Expected: fb4769d4c1e8ccd3c480e0caeca07c9baa2b3ef0540828894dddeea3d4ed016e
+```
 
-## Note on Syncing
-Once you input your inner hash (or seed phrase) you can begin syncing your node.
+### Linux Terminal
 
-Wait until the node is fully synced, and then begin mining. 
+```bash
+sha256sum quantus_miner_linux.tar.gz
+# Expected: fd2755f2fe5df05af3deb8e1081fa808f6c872bd9d4bf2853eea0fe354655076
+```
 
-Depending on your internet speed it may take 5-30 minutes for the node to full sync.
+## Install
 
-## Monitoring
+### Windows
 
-Check your mining progress on the [telemetry dashboard](https://telemetry.quantus.cat/).
+1. Download and extract `quantus_miner_windows.zip`.
+2. Open the extracted folder and run `quantus_miner.exe`.
+3. If Windows Defender warns, verify the SHA-256 above before choosing to run it.
 
-## Troubleshooting
+### macOS
 
-| Problem | Solution |
-|---------|----------|
-| macOS blocks the app | System Settings > Privacy & Security > "Open Anyway" |
-| App won't connect | Make sure your Quantus node is running first |
-| Low hash rate | Increase CPU workers or enable GPU mining in settings |
-| Mining not producing blocks | Verify your node is fully synced before mining |
+1. Download and extract `quantus_miner_macos.zip`.
+2. Open `Quantus Miner.app`.
+3. If macOS blocks it, open System Settings, Privacy & Security, then choose Open Anyway.
 
-## Next Steps
+### Linux x64
 
-For advanced mining configuration (external miner, build from source), see the full [Mining and Running a Node](./mining) guide.
+1. Download and extract `quantus_miner_linux.tar.gz`.
+2. Mark `quantus_miner` executable with `chmod u+x quantus_miner`.
+3. Run `./quantus_miner`.
+
+The release does not publish minimum OS versions. The release team must supply those facts before the app can be presented as universally supported.
+
+## What the app handles
+
+The app downloads the node and external miner, creates the local node identity, starts both processes, monitors sync, and shows mining statistics. A recovery phrase entered into the app is handled locally by its wallet flow.
+
+The app is ready to become the primary route after it consumes the shared compatibility manifest, verifies every runtime download, and avoids exposing reward material in logs or process arguments. Until then, use the [verified terminal guide](/guides/mining) where supported.
