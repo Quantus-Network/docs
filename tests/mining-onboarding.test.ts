@@ -35,8 +35,11 @@ const bash = existsSync('C:/Program Files/Git/bin/bash.exe')
 const shellScriptPath = scriptPath.replaceAll('\\', '/');
 const shellManifestPath = manifestPath.replaceAll('\\', '/');
 
+// --noprofile --norc: a developer's login profile must not leak into the
+// captured output (a `clear` in .bash_profile prints an escape sequence that
+// would otherwise land in stdout and fail exact-match assertions).
 function runBash(body: string) {
-  return spawnSync(bash, ['-lc', body], {
+  return spawnSync(bash, ['--noprofile', '--norc', '-c', body], {
     cwd: root,
     encoding: 'utf8',
     env: {...process.env, HOME: process.env.HOME ?? process.env.USERPROFILE},
