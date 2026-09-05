@@ -203,3 +203,112 @@ describe('installer safety helpers', () => {
     expect(checksumLine).toBe(`${expected}  quantus-mining.sh`);
   });
 });
+
+const ps1Path = resolve(root, 'static/scripts/quantus-mining.ps1');
+const ps1ChecksumPath = resolve(root, 'static/scripts/quantus-mining.ps1.sha256');
+const ps1 = readFileSync(ps1Path, 'utf8');
+
+// Windows PowerShell 5.1 ships with Windows; pwsh is the cross-platform build.
+// The behaviour tests run on whichever exists and are skipped where neither
+// does, so a Linux CI runner without pwsh still passes the static checks.
+const powershell = ['pwsh', 'powershell'].find((exe) => {
+  const probe = spawnSync(exe, ['-NoProfile', '-Command', '$PSVersionTable.PSVersion.Major'], {encoding: 'utf8'});
+  return probe.status === 0;
+});
+
+function runPowerShell(body: string) {
+  return spawnSync(powershell as string, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', body], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+}
+
+describe('windows installer', () => {
+  test('mirrors the shell installer contract', () => {
+    for (const needle of ['mine', 'status', 'restart-check', 'setup', 'stop', 'uninstall']) {
+      expect(ps1).toMatch(new RegExp(`'${needle}'\\s*\\{`));
+    }
+    expect(ps1).toContain('Import-CompatibilityManifest');
+    expect(ps1).toContain('Assert-Sha256');
+    expect(ps1).toContain('quantus-miner/2');
+    expect(ps1).toContain("node$($script:PlatformKey)Url");
+    expect(ps1).toContain("miner$($script:PlatformKey)Url");
+    expect(ps1).not.toContain('/releases/latest');
+    expect(ps1).not.toContain('Invoke-Expression');
+    expect(ps1).not.toMatch(/\biex\b/);
+    expect(ps1).not.toContain('—');
+    expect(ps1).not.toMatch(/September 9|Sep(?:tember)?\.? 9/i);
+  });
+
+  test('uses the Windows assets the manifest publishes', () => {
+    expect(manifest.nodeWindowsX8664Url).toMatch(/quantus-node-v0\.10\.0-x86_64-pc-windows-msvc\.zip$/);
+    expect(manifest.minerWindowsX8664Url).toMatch(/quantus-miner-windows-x86_64\.exe$/);
+    expect(ps1).toContain("'x86_64-pc-windows-msvc'");
+    expect(ps1).toContain("'quantus-miner-windows-x86_64.exe'");
+  });
+
+  test('keeps the recovery phrase off the command line and out of the config', () => {
+    expect(ps1).toContain('Read-Host -Prompt \'Recovery phrase\' -AsSecureString');
+    expect(ps1).toMatch(/\$phrase \| & \$script:NodeBin key quantus --scheme wormhole --words/);
+    const configBody = ps1.match(/\$lines = @\(([\s\S]*?)\n\s*\)/)?.[1];
+    expect(configBody).toBeDefined();
+    expect(configBody).not.toContain('INNER_HASH');
+    expect(configBody).not.toContain('_innerHash');
+  });
+
+  test('guide and skill point Windows users at the PowerShell installer', () => {
+    for (const content of [guide, skill]) {
+      expect(content).toContain('quantus-mining.ps1 mine');
+      expect(content).toContain('Add-MpPreference -ExclusionPath');
+    }
+    expect(guide).toContain('quantus-mining.ps1.sha256');
+    expect(guide).toContain('Unblock-File');
+    expect(guide).not.toMatch(/Invoke-WebRequest[^\n]*\|\s*(iex|Invoke-Expression)/i);
+  });
+
+  test('publishes the checksum for the exact installer bytes', () => {
+    const checksumLine = readFileSync(ps1ChecksumPath, 'utf8').trim();
+    const expected = createHash('sha256').update(ps1).digest('hex');
+    expect(checksumLine).toBe(`${expected}  quantus-mining.ps1`);
+  });
+
+  test.skipIf(!powershell)('parses without errors', () => {
+    const result = runPowerShell(
+      `$t=$null;$e=$null;[System.Management.Automation.Language.Parser]::ParseFile('${ps1Path.replaceAll('\\', '\\\\')}',[ref]$t,[ref]$e)|Out-Null;$e.Count`,
+    );
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe('0');
+  });
+
+  test.skipIf(!powershell)('loads the pinned pair, classifies protocols, fails closed, and redacts', () => {
+    const load = `. '${ps1Path.replaceAll('\\', '\\\\')}'; `;
+    const pair = runPowerShell(
+      load + `$m = Import-CompatibilityManifest '${manifestPath.replaceAll('\\', '\\\\')}'; "$($m['_chain'])|$($m['_nodeVersion'])|$($m['_minerVersion'])|$($m['_minerProtocol'])"`,
+    );
+    expect(pair.status).toBe(0);
+    expect(pair.stdout.trim()).toBe('planck|v0.10.0|v4.0.2|quantus-miner/2');
+
+    const protocol = runPowerShell(
+      load + `(Get-MinerProtocol 'x --miner-auth-token-file' 'y --auth-token-file --tls-cert-sha256-file') + '|' + (Get-MinerProtocol 'a' 'b')`,
+    );
+    expect(protocol.stdout.trim()).toBe('auth|legacy');
+
+    const mixed = runPowerShell(load + `Get-MinerProtocol 'x --miner-auth-token-file' 'plain miner'`);
+    expect(mixed.status).not.toBe(0);
+    expect(mixed.stderr).toContain('Incompatible node/miner pair');
+
+    const bad = runPowerShell(
+      load + `$f = [IO.Path]::GetTempFileName(); [IO.File]::WriteAllText($f, 'hello'); Assert-Sha256 $f ('a' * 64)`,
+    );
+    expect(bad.status).not.toBe(0);
+    expect(bad.stderr).toContain('Checksum verification failed');
+    expect(bad.stderr).toContain('The file was not installed');
+
+    const hex = 'a'.repeat(64);
+    const redact = runPowerShell(load + `Hide-Secrets 'inner hash: 0x${hex} auth token=token123 mnemonic: alpha'`);
+    expect(redact.stdout).toContain('[redacted]');
+    expect(redact.stdout).not.toContain(hex);
+    expect(redact.stdout).not.toContain('token123');
+    expect(redact.stdout).not.toContain('alpha');
+  });
+});

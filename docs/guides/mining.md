@@ -11,17 +11,19 @@ This guide connects a computer to the **Planck testnet** and starts the supporte
 
 You need a Quantus wallet with its 24-word recovery phrase. Keep that phrase offline. Never paste it into chat, email, a support ticket, or a command.
 
-The verified script supports macOS, Linux x64, and WSL2 on Windows. Native Windows users can review the [desktop Miner App preview](/guides/miner-app).
+There are two verified installers, one per shell, and they behave identically: `quantus-mining.sh` for macOS, Linux x64, and WSL2, and `quantus-mining.ps1` for native Windows 10/11 x64. Both read the same [compatibility manifest](/mining-compatibility.json), verify the same checksums, ask for the recovery phrase the same way, and print the same status. On Windows, use PowerShell rather than WSL2: the miner needs the native graphics driver to use the GPU. The [desktop Miner App](/guides/miner-app) remains a preview and is not the verified path.
 
 ## Three steps
 
-### 1. Open Terminal
+### 1. Open a shell
 
-On Windows, open an Ubuntu WSL2 terminal. On macOS or Linux, open Terminal.
+On macOS or Linux, open Terminal. On Windows, press the Windows key, type `PowerShell`, and press Enter. No WSL is needed.
 
 ### 2. Run the verified installer
 
 This downloads the script to disk, verifies its SHA-256 checksum, and only then runs it. It does not pipe remote code into a shell.
+
+macOS, Linux, or WSL2:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -fsS https://docs.quantus.com/scripts/quantus-mining.sh -o quantus-mining.sh && \
@@ -30,13 +32,24 @@ curl --proto '=https' --tlsv1.2 -fsS https://docs.quantus.com/scripts/quantus-mi
 chmod u+x quantus-mining.sh && ./quantus-mining.sh mine
 ```
 
+Windows PowerShell:
+
+```powershell
+[Net.ServicePointManager]::SecurityProtocol = 'Tls12'
+Invoke-WebRequest -UseBasicParsing https://docs.quantus.com/scripts/quantus-mining.ps1 -OutFile quantus-mining.ps1
+Invoke-WebRequest -UseBasicParsing https://docs.quantus.com/scripts/quantus-mining.ps1.sha256 -OutFile quantus-mining.ps1.sha256
+if ((Get-FileHash quantus-mining.ps1 -Algorithm SHA256).Hash.ToLower() -ne (Get-Content quantus-mining.ps1.sha256).Split(' ')[0]) { throw 'Checksum mismatch. Delete both files and retry.' }
+Unblock-File quantus-mining.ps1
+powershell -ExecutionPolicy Bypass -File .\quantus-mining.ps1 mine
+```
+
 The installer selects the published pair from the [compatibility manifest](/mining-compatibility.json): node `v0.10.0`, miner `v4.0.2`, and protocol `quantus-miner/2`. It verifies every release asset before installation. There are no version or network choices.
 
 ### 3. Enter your recovery phrase locally
 
 The prompt is hidden. The phrase is used locally to derive your wormhole reward address, then discarded. It is not saved, logged, sent over the network, or placed in command history.
 
-The installer names the node, detects a conservative CPU or GPU configuration, starts both processes, and prints status. Initial chain sync can take from minutes to hours and does not count as hands-on setup time.
+The installer names the node, detects a conservative CPU or GPU configuration, starts both processes, and prints status. Initial chain sync downloads and executes every block, which is the only sync mode this network supports, and takes one to a few hours depending on the connection. It does not count as hands-on setup time, and the miner starts working the moment the node reports it is synced.
 
 ## Know when it works
 
@@ -45,6 +58,8 @@ Run:
 ```bash
 ./quantus-mining.sh status
 ```
+
+On Windows, every command is the same with `.\quantus-mining.ps1` in place of `./quantus-mining.sh`. While syncing, the Windows status line also shows the current block, the target, the rate, and the time left.
 
 A complete success state shows:
 
@@ -94,7 +109,7 @@ The manifest currently publishes minimum OS versions as `not-published`. That is
 ## One-copy AI prompt
 
 ```text
-Help me start Quantus Planck testnet mining on this computer using https://docs.quantus.com/guides/mining and its compatibility manifest. Use the verified quantus-mining.sh flow and do not choose versions independently. Never ask me to paste, upload, reveal, or store my recovery phrase, private key, reward preimage, miner auth token, or TLS material in chat, command arguments, logs, telemetry, or a repository. Pause while I enter recovery words locally into the hidden prompt. Keep miner, RPC, and metrics ports private. Do not switch networks or claim monetary rewards. Finish only when status shows the network, supported pair, sync state, Mining state, hash rate, reward address, telemetry route, and a passed restart check.
+Help me start Quantus Planck testnet mining on this computer using https://docs.quantus.com/guides/mining and its compatibility manifest. Use the verified quantus-mining.sh flow on macOS, Linux, or WSL2, or the verified quantus-mining.ps1 flow on native Windows, and do not choose versions independently. Never ask me to paste, upload, reveal, or store my recovery phrase, private key, reward preimage, miner auth token, or TLS material in chat, command arguments, logs, telemetry, or a repository. Pause while I enter recovery words locally into the hidden prompt. Keep miner, RPC, and metrics ports private. Do not switch networks or claim monetary rewards. Finish only when status shows the network, supported pair, sync state, Mining state, hash rate, reward address, telemetry route, and a passed restart check.
 ```
 
 ## Fix one problem at a time
@@ -102,7 +117,9 @@ Help me start Quantus Planck testnet mining on this computer using https://docs.
 | Problem | One recovery action |
 | --- | --- |
 | Checksum failed | Delete the named download and run the verified installer again. |
-| Unsupported platform | Use macOS, Linux x64, or WSL2 on an x64 Windows machine. |
+| Unsupported platform | Use macOS, Linux x64, or 64-bit Windows 10/11. Windows on ARM has no published binaries. |
+| PowerShell refuses to run the script | Run `Unblock-File .\quantus-mining.ps1`, or start it with `powershell -ExecutionPolicy Bypass -File .\quantus-mining.ps1 mine`. |
+| Windows: sync shows peers but the block number is not moving | Windows Defender is scanning the chain database. Run once in an elevated PowerShell: `Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\quantus-node"`, then `.\quantus-mining.ps1 restart-check`. |
 | Installed pair is stale | Run `./quantus-mining.sh setup --force`. |
 | Node or miner stopped | Run `./quantus-mining.sh mine`. |
 | Sync still says `Syncing` | Leave the process running and check `status` later. |

@@ -80,7 +80,7 @@ detect_platform() {
     Linux*) OS="linux" ;;
     Darwin*) OS="macos" ;;
     *)
-      die "Unsupported operating system: $(uname -s). Use macOS, Linux, or WSL2."
+      die "Unsupported operating system: $(uname -s). Use macOS, Linux, or WSL2. On native Windows, use quantus-mining.ps1 in PowerShell."
       ;;
   esac
 
