@@ -310,5 +310,5 @@ describe('windows installer', () => {
     expect(redact.stdout).not.toContain(hex);
     expect(redact.stdout).not.toContain('token123');
     expect(redact.stdout).not.toContain('alpha');
-  });
+  }, 20_000); // Five PowerShell startups can exceed Bun's default five seconds.
 });

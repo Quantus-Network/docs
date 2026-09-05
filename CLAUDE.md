@@ -1,5 +1,19 @@
 # Quantus Docs
 
+## Agent setup entry point (2026-09-05)
+
+`static/agent-setup/prompt.md` adds the one-line mining handoff to the existing
+`codex/one-command-mining-9-9` branch / PR #14. The mining guide links it before
+manual prerequisites. It reuses the existing manifest and installers, pauses
+before secret input, and distinguishes syncing from mining. Do not claim the
+endpoint is live until this PR is deployed. No wallet input or mining runtime
+was exercised by this documentation change.
+
+Validation: TypeScript, all 23 tests via `bun test`, and the production build
+passed. The five-process PowerShell test now has an explicit 20-second timeout;
+assertions are unchanged. The build emits existing Browserslist age and UMD
+dependency warnings. The new production URL still returns 404 before deployment.
+
 Technical documentation site for Quantus Network. Built with Docusaurus, deployed to docs.quantus.com.
 
 ## Build
