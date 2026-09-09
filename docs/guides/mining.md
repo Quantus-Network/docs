@@ -5,9 +5,22 @@ title: Mining and Running a Node
 
 # Mining and Running a Node
 
-This guide covers connecting to the Quantus Planck testnet and mining. Works on macOS and Linux (including WSL2 on Windows).
+This guide covers connecting to Quantus **mainnet** and mining. Works on macOS and Linux (including WSL2 on Windows).
+
+Use `--chain mainnet` (not `planck` — that is the retired public testnet). You need node **v1.0.1 or newer**; older binaries do not include the mainnet chain spec.
 
 Use the **Copy Context** button at the top of this page to copy everything as Markdown -- the full guide plus an AI mining skill. Paste it to an agent like Claude Code to be walked through setup interactively, or keep it as an offline reference.
+
+## Migrating from Planck
+
+Planck is a different chain. Mainnet does not share its history, database, or rewards.
+
+1. Install a node **v1.0.1+** from [Releases](https://github.com/Quantus-Network/chain/releases/latest).
+2. Change `--chain planck` to `--chain mainnet`, or `./quantus-mining.sh config set CHAIN mainnet`.
+3. Sync from genesis into `.../chains/mainnet/`. Do not copy or reuse `.../chains/planck/`.
+4. Keep the same wormhole inner hash if you want rewards at the same address.
+
+Do not pass `--force-authoring` to join mainnet. That flag is only for bootstrapping a brand-new network.
 
 ## Prerequisites
 
@@ -56,7 +69,9 @@ chmod +x quantus-mining.sh
 ./quantus-mining.sh start
 ```
 
-The script generates your wormhole inner hash, node identity, and a config file at `~/quantus-mining/mining.conf`. It downloads native `quantus-node` and `quantus-miner` binaries into `~/quantus-mining/bin/`. GPU mining is recommended; the miner runs on the host so it can use Metal / Vulkan / DirectX.
+The script generates your wormhole inner hash, node identity, and a config file at `~/quantus-mining/mining.conf` (`CHAIN=mainnet`). It downloads native `quantus-node` and `quantus-miner` binaries into `~/quantus-mining/bin/`. GPU mining is recommended; the miner runs on the host so it can use Metal / Vulkan / DirectX.
+
+If you already have a Planck-era `mining.conf`, switch with `./quantus-mining.sh config set CHAIN mainnet`, then `./quantus-mining.sh setup --force` so you get a v1.0.1+ node. Planck chain data is not reused.
 
 The script checks the downloaded pair's `--help` output and only passes auth/TLS flags when **both** binaries support miner QUIC auth (`quantus-miner/2`). Mixing an auth-capable node with a pre-auth miner (or the reverse) is rejected. Pin a matching pair with `NODE_VERSION` / `MINER_VERSION` in `mining.conf` (or `./quantus-mining.sh config set NODE_VERSION <tag>`), then run `./quantus-mining.sh setup --force` to download those tags. Environment variables of the same name override the file. Unset pins fetch GitHub `releases/latest` independently and may not match.
 
@@ -147,7 +162,7 @@ Replace the two placeholders before running:
   --name <YOUR_NODE_NAME> \
   --validator \
   --miner-listen-port 9833 \
-  --chain planck \
+  --chain mainnet \
   --node-key-file node_key.p2p \
   --rewards-inner-hash <YOUR_INNER_HASH> \
   --max-blocks-per-request 64 \
@@ -172,8 +187,8 @@ Default chain directory:
 
 | Platform | Path |
 |----------|------|
-| Linux | `~/.local/share/quantus-node/chains/planck/` |
-| macOS | `~/Library/Application Support/quantus-node/chains/planck/` |
+| Linux | `~/.local/share/quantus-node/chains/mainnet/` |
+| macOS | `~/Library/Application Support/quantus-node/chains/mainnet/` |
 
 Wait until logs show the miner server is listening (and the auth/TLS file paths) before starting the miner. If miner-server startup fails, the node exits -- it does not fall back to local mining.
 
@@ -192,8 +207,8 @@ xattr -d com.apple.quarantine quantus-miner-macos-aarch64 && chmod u+x quantus-m
 Wait for the node logs to show the miner server is listening, then run the following in the **separate terminal**. Quote `CHAIN_DIR` — the macOS path contains a space. If not on Apple Silicon, replace `quantus-miner-macos-aarch64` with your platform's binary name.
 
 ```bash
-CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
-# Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
+CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/mainnet"
+# Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/mainnet"
 
 ./quantus-miner-macos-aarch64 serve \
   --cpu-workers 4 \
@@ -212,8 +227,8 @@ The above command is fairly conservative for most modern hardware.
 For example if you want to use your GPU and have many CPU cores available you could run
 
 ```bash
-CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
-# Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
+CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/mainnet"
+# Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/mainnet"
 
 ./quantus-miner-macos-aarch64 serve \
   --cpu-workers 8 \
@@ -243,10 +258,10 @@ Rewards accumulate at your wormhole address as you mine. The wallet app supports
 
 ```bash
 # Linux
-tail -f ~/.local/share/quantus-node/chains/planck/network/quantus-node.log
+tail -f ~/.local/share/quantus-node/chains/mainnet/network/quantus-node.log
 
 # macOS
-tail -f ~/Library/Application\ Support/quantus-node/chains/planck/network/quantus-node.log
+tail -f ~/Library/Application\ Support/quantus-node/chains/mainnet/network/quantus-node.log
 
 # Or run with verbose logging
 RUST_LOG=info ./quantus-node [options]
@@ -272,9 +287,9 @@ RUST_LOG=info ./quantus-node [options]
 - **Updates:** Check [GitHub Releases](https://github.com/Quantus-Network/chain/releases/latest) for new versions regularly. Node and miner must ship the same miner protocol (`quantus-miner/2`).
 - **Monitoring:** Watch for unusual peer counts, sync stalls, or dropped miner connections
 
-### Testnet Disclaimer
+### Mainnet notes
 
-Planck is testnet software for testing purposes only. Tokens have no monetary value. The network may be reset periodically, and breaking changes are expected between releases.
+This is the live Quantus network. Tokens (QTC) have value. Back up your seed phrase, keep miner auth files private, and run the node version the network is on. Planck testnet data and PLK balances do not carry over.
 
 
 ### Getting Help

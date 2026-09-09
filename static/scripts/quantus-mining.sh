@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# quantus-mining.sh — Set up and manage Quantus Planck testnet mining.
+# quantus-mining.sh — Set up and manage Quantus mainnet mining.
 #
 # Supports macOS, Linux, and WSL2. Requires bash, curl, and tar.
 #
@@ -526,7 +526,7 @@ prompt_resource_allocation() {
 }
 
 write_config() {
-  CHAIN="${CHAIN:-planck}"
+  CHAIN="${CHAIN:-mainnet}"
   MINER_LISTEN_PORT="${MINER_LISTEN_PORT:-9833}"
   CPU_WORKERS="${CPU_WORKERS:-0}"
   GPU_DEVICES="${GPU_DEVICES:-0}"
@@ -561,10 +561,16 @@ load_config() {
   : "${NODE_NAME:?NODE_NAME missing in config}"
   : "${INNER_HASH:?INNER_HASH missing in config}"
   NODE_KEY_FILE="${NODE_KEY_FILE:-node_key.p2p}"
-  CHAIN="${CHAIN:-planck}"
+  CHAIN="${CHAIN:-mainnet}"
   MINER_LISTEN_PORT="${MINER_LISTEN_PORT:-9833}"
   CPU_WORKERS="${CPU_WORKERS:-0}"
   GPU_DEVICES="${GPU_DEVICES:-0}"
+
+  if [ "$CHAIN" = "planck" ]; then
+    warn "CHAIN=planck is the retired public testnet. Quantus mainnet uses --chain mainnet."
+    warn "Switch with: ${SCRIPT_NAME} config set CHAIN mainnet"
+    warn "Planck chain data is a different network and cannot be reused."
+  fi
 }
 
 process_alive() {
@@ -724,7 +730,7 @@ node_chain_dir() {
 
   base="$(node_data_path)"
   chain_root="${base}/chains"
-  expected="${chain_root}/${CHAIN:-planck}"
+  expected="${chain_root}/${CHAIN:-mainnet}"
 
   if [ -d "$expected" ]; then
     printf '%s' "$expected"
@@ -874,7 +880,7 @@ validate_editable_key() {
 
 cmd_help() {
   cat <<EOF
-${SCRIPT_NAME} — Set up and manage Quantus Planck testnet mining.
+${SCRIPT_NAME} — Set up and manage Quantus mainnet mining.
 
 Working directory: ${MINING_DIR}
 Config file:       ${CONFIG_FILE}

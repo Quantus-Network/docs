@@ -36,7 +36,7 @@ src/
 - Use tables and bullet points over prose paragraphs
 - Mermaid diagrams where they clarify architecture
 - Source claims from the codebase, DeepWiki exports, or quantusContext.md -- do not hallucinate
-- Mining guide follows chain `MINING.md` as source of truth (https://github.com/Quantus-Network/chain/blob/main/MINING.md)
+- Mining guide targets Quantus mainnet (`--chain mainnet`, data under `chains/mainnet/`). Chain `MINING.md` may still mention Planck; do not revert public docs to the testnet.
 - Do NOT publish internal AI audit findings (quantus-audit/ is internal only)
 - Theme tokens follow the main website design system (void `#0e0e0e`, flare `#ff6b35`, content `#e8e6e0`, Geist + Geist Mono); dark mode only
 
