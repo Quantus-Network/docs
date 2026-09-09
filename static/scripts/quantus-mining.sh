@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# quantus-mining.sh — Set up and manage Quantus Planck testnet mining.
+# quantus-mining.sh — Set up and manage Quantus mainnet mining.
 #
 # Supports macOS, Linux, and WSL2. Requires bash, curl, and tar.
 #
@@ -8,7 +8,7 @@
 # Config file: ~/quantus-mining/mining.conf (mode 600)
 #
 # Usage:
-#   ./quantus-mining.sh setup [--force]
+#   ./quantus-mining.sh setup [--force]   # --force re-downloads binaries and keeps INNER_HASH
 #   ./quantus-mining.sh config show|set KEY VALUE|edit
 #   ./quantus-mining.sh start [-d|--detach]
 #   ./quantus-mining.sh start-node|start-miner
@@ -526,7 +526,7 @@ prompt_resource_allocation() {
 }
 
 write_config() {
-  CHAIN="${CHAIN:-planck}"
+  CHAIN="${CHAIN:-mainnet}"
   MINER_LISTEN_PORT="${MINER_LISTEN_PORT:-9833}"
   CPU_WORKERS="${CPU_WORKERS:-0}"
   GPU_DEVICES="${GPU_DEVICES:-0}"
@@ -561,10 +561,16 @@ load_config() {
   : "${NODE_NAME:?NODE_NAME missing in config}"
   : "${INNER_HASH:?INNER_HASH missing in config}"
   NODE_KEY_FILE="${NODE_KEY_FILE:-node_key.p2p}"
-  CHAIN="${CHAIN:-planck}"
+  CHAIN="${CHAIN:-mainnet}"
   MINER_LISTEN_PORT="${MINER_LISTEN_PORT:-9833}"
   CPU_WORKERS="${CPU_WORKERS:-0}"
   GPU_DEVICES="${GPU_DEVICES:-0}"
+
+  if [ "$CHAIN" = "planck" ]; then
+    warn "CHAIN=planck is the retired public testnet. Quantus mainnet uses --chain mainnet."
+    warn "Switch with: ${SCRIPT_NAME} config set CHAIN mainnet"
+    warn "Planck chain data is a different network and cannot be reused."
+  fi
 }
 
 process_alive() {
@@ -724,7 +730,7 @@ node_chain_dir() {
 
   base="$(node_data_path)"
   chain_root="${base}/chains"
-  expected="${chain_root}/${CHAIN:-planck}"
+  expected="${chain_root}/${CHAIN:-mainnet}"
 
   if [ -d "$expected" ]; then
     printf '%s' "$expected"
@@ -874,13 +880,13 @@ validate_editable_key() {
 
 cmd_help() {
   cat <<EOF
-${SCRIPT_NAME} — Set up and manage Quantus Planck testnet mining.
+${SCRIPT_NAME} — Set up and manage Quantus mainnet mining.
 
 Working directory: ${MINING_DIR}
 Config file:       ${CONFIG_FILE}
 
 Commands:
-  setup [--force]           Interactive setup: download binaries, generate keys, write config
+  setup [--force]           Interactive setup. --force re-downloads binaries and keeps the existing wormhole identity
   config show               Show current config (inner hash masked)
   config set KEY VALUE      Update an editable config key
   config edit               Open config in \$EDITOR
@@ -904,6 +910,8 @@ EOF
 
 cmd_setup() {
   local force="false"
+  local existing_config="false"
+  local refresh_only="false"
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -932,13 +940,22 @@ cmd_setup() {
   info "Platform: ${OS} / ${ARCH} (${NODE_TARGET})"
   info "Working directory: ${MINING_DIR}"
 
-  if [ -f "$CONFIG_FILE" ] && [ "$force" != "true" ]; then
-    warn "Config already exists at ${CONFIG_FILE}"
-    read -r -p "Overwrite existing setup? (y/N): " confirm
-    case "$(tolower "$confirm")" in
-      y|yes) ;;
-      *) info "Setup cancelled."; return 0 ;;
-    esac
+  if [ -f "$CONFIG_FILE" ]; then
+    existing_config="true"
+    if [ "$force" = "true" ]; then
+      refresh_only="true"
+    else
+      warn "Config already exists at ${CONFIG_FILE}"
+      read -r -p "Overwrite existing setup? (y/N): " confirm
+      case "$(tolower "$confirm")" in
+        y|yes) ;;
+        *) info "Setup cancelled."; return 0 ;;
+      esac
+    fi
+  fi
+
+  if [ "$refresh_only" = "true" ]; then
+    load_config
   fi
 
   download_binaries "$force"
@@ -950,15 +967,26 @@ cmd_setup() {
     info "Using existing node key at ${NODE_KEY_PATH}"
   fi
 
-  read -r -p "Enter a node name (shown on telemetry): " NODE_NAME
-  [ -n "$NODE_NAME" ] || die "Node name cannot be empty"
+  if [ "$refresh_only" = "true" ]; then
+    info "Keeping existing node name: ${NODE_NAME}"
+    info "Keeping existing wormhole inner hash ($(mask_hash "$INNER_HASH"))"
+    info "Rewards stay at ${WORMHOLE_ADDRESS}"
+  else
+    read -r -p "Enter a node name (shown on telemetry): " NODE_NAME
+    [ -n "$NODE_NAME" ] || die "Node name cannot be empty"
+    generate_wormhole_keys
+    prompt_resource_allocation
+  fi
 
-  generate_wormhole_keys
-  prompt_resource_allocation
   write_config
 
   echo ""
-  info "Setup complete."
+  if [ "$refresh_only" = "true" ]; then
+    info "Binaries refreshed. Reward identity unchanged."
+    info "Verify with: ${SCRIPT_NAME} config show"
+  else
+    info "Setup complete."
+  fi
   info "Start mining with: ${SCRIPT_NAME} start"
   info "Telemetry dashboard: https://telemetry.quantus.cat/"
 }
@@ -1377,4 +1405,6 @@ main() {
   esac
 }
 
-main "$@"
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  main "$@"
+fi

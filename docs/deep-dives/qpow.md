@@ -50,12 +50,12 @@ flowchart TD
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| Block Time | ~12 seconds target | Planck testnet |
+| Block Time | ~12 seconds target | Quantus mainnet |
 | Max Reorg Depth | 100 blocks | `MaxReorgDepth` |
 | Difficulty Adjustment | +/-10% per block | `DifficultyAdjustPercentClamp` |
 | EMA Smoothing | alpha = 0.1 | `EmaAlpha = 100/1000` |
 | Finalization | 100 blocks behind best | `MaxReorgDepth` |
-| Native Token | QUAN (12 decimals) | Max supply 21,000,000 |
+| Native Token | QTC (12 decimals) | Max supply 21,000,000 |
 | SS58 Prefix | 189 | Addresses start with `qz...` |
 
 ## Difficulty Adjustment
@@ -88,7 +88,7 @@ The node binary includes a basic CPU-only miner for testing and small-scale mini
 ```bash
 ./quantus-node \
     --validator \
-    --chain planck \
+    --chain mainnet \
     --node-key-file ~/.quantus/node_key.p2p \
     --rewards-inner-hash <YOUR_INNER_HASH>
 ```
@@ -103,14 +103,14 @@ For higher performance, a separate miner process offloads the PoW computation. T
 # Start the node with the miner listen port open
 RUST_LOG=info ./quantus-node \
     --validator \
-    --chain planck \
+    --chain mainnet \
     --node-key-file ~/.quantus/node_key.p2p \
     --rewards-inner-hash <YOUR_INNER_HASH> \
     --miner-listen-port 9833
 
 # In a separate terminal, start the external miner (auth token + TLS pin required)
-CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
-# macOS: CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
+CHAIN_DIR="$HOME/.local/share/quantus-node/chains/mainnet"
+# macOS: CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/mainnet"
 RUST_LOG=info ./quantus-miner serve \
     --node-addr 127.0.0.1:9833 \
     --auth-token-file "$CHAIN_DIR/miner-auth-token" \

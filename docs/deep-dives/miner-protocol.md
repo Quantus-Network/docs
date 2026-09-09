@@ -214,14 +214,14 @@ Miner                                        Node
 # Auth token + TLS cert/fingerprint are created on first run under
 # <base-path>/chains/<chain>/ (token is not logged — read miner-auth-token;
 # fingerprint is logged; override auth path with --miner-auth-token-file).
-quantus-node --validator --chain planck --miner-listen-port 9833
+quantus-node --validator --chain mainnet --miner-listen-port 9833
 ```
 
 ### Miner
 
 ```bash
-CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
-# Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
+CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/mainnet"
+# Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/mainnet"
 quantus-miner serve \
   --node-addr 127.0.0.1:9833 \
   --auth-token-file "$CHAIN_DIR/miner-auth-token" \
