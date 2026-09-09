@@ -8,7 +8,7 @@
 # Config file: ~/quantus-mining/mining.conf (mode 600)
 #
 # Usage:
-#   ./quantus-mining.sh setup [--force]
+#   ./quantus-mining.sh setup [--force]   # --force re-downloads binaries and keeps INNER_HASH
 #   ./quantus-mining.sh config show|set KEY VALUE|edit
 #   ./quantus-mining.sh start [-d|--detach]
 #   ./quantus-mining.sh start-node|start-miner
@@ -886,7 +886,7 @@ Working directory: ${MINING_DIR}
 Config file:       ${CONFIG_FILE}
 
 Commands:
-  setup [--force]           Interactive setup: download binaries, generate keys, write config
+  setup [--force]           Interactive setup. --force re-downloads binaries and keeps the existing wormhole identity
   config show               Show current config (inner hash masked)
   config set KEY VALUE      Update an editable config key
   config edit               Open config in \$EDITOR
@@ -910,6 +910,8 @@ EOF
 
 cmd_setup() {
   local force="false"
+  local existing_config="false"
+  local refresh_only="false"
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -938,13 +940,22 @@ cmd_setup() {
   info "Platform: ${OS} / ${ARCH} (${NODE_TARGET})"
   info "Working directory: ${MINING_DIR}"
 
-  if [ -f "$CONFIG_FILE" ] && [ "$force" != "true" ]; then
-    warn "Config already exists at ${CONFIG_FILE}"
-    read -r -p "Overwrite existing setup? (y/N): " confirm
-    case "$(tolower "$confirm")" in
-      y|yes) ;;
-      *) info "Setup cancelled."; return 0 ;;
-    esac
+  if [ -f "$CONFIG_FILE" ]; then
+    existing_config="true"
+    if [ "$force" = "true" ]; then
+      refresh_only="true"
+    else
+      warn "Config already exists at ${CONFIG_FILE}"
+      read -r -p "Overwrite existing setup? (y/N): " confirm
+      case "$(tolower "$confirm")" in
+        y|yes) ;;
+        *) info "Setup cancelled."; return 0 ;;
+      esac
+    fi
+  fi
+
+  if [ "$refresh_only" = "true" ]; then
+    load_config
   fi
 
   download_binaries "$force"
@@ -956,15 +967,26 @@ cmd_setup() {
     info "Using existing node key at ${NODE_KEY_PATH}"
   fi
 
-  read -r -p "Enter a node name (shown on telemetry): " NODE_NAME
-  [ -n "$NODE_NAME" ] || die "Node name cannot be empty"
+  if [ "$refresh_only" = "true" ]; then
+    info "Keeping existing node name: ${NODE_NAME}"
+    info "Keeping existing wormhole inner hash ($(mask_hash "$INNER_HASH"))"
+    info "Rewards stay at ${WORMHOLE_ADDRESS}"
+  else
+    read -r -p "Enter a node name (shown on telemetry): " NODE_NAME
+    [ -n "$NODE_NAME" ] || die "Node name cannot be empty"
+    generate_wormhole_keys
+    prompt_resource_allocation
+  fi
 
-  generate_wormhole_keys
-  prompt_resource_allocation
   write_config
 
   echo ""
-  info "Setup complete."
+  if [ "$refresh_only" = "true" ]; then
+    info "Binaries refreshed. Reward identity unchanged."
+    info "Verify with: ${SCRIPT_NAME} config show"
+  else
+    info "Setup complete."
+  fi
   info "Start mining with: ${SCRIPT_NAME} start"
   info "Telemetry dashboard: https://telemetry.quantus.cat/"
 }
@@ -1383,4 +1405,6 @@ main() {
   esac
 }
 
-main "$@"
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  main "$@"
+fi

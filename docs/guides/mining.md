@@ -18,7 +18,7 @@ Planck is a different chain. Mainnet does not share its history, database, or re
 1. Install a node **v1.0.1+** from [Releases](https://github.com/Quantus-Network/chain/releases/latest).
 2. Change `--chain planck` to `--chain mainnet`, or `./quantus-mining.sh config set CHAIN mainnet`.
 3. Sync from genesis into `.../chains/mainnet/`. Do not copy or reuse `.../chains/planck/`.
-4. Keep the same wormhole inner hash if you want rewards at the same address.
+4. Keep the same wormhole inner hash if you want rewards at the same address. The installer `--force` path does this automatically — do not generate a new keypair.
 
 Do not pass `--force-authoring` to join mainnet. That flag is only for bootstrapping a brand-new network.
 
@@ -71,7 +71,7 @@ chmod +x quantus-mining.sh
 
 The script generates your wormhole inner hash, node identity, and a config file at `~/quantus-mining/mining.conf` (`CHAIN=mainnet`). It downloads native `quantus-node` and `quantus-miner` binaries into `~/quantus-mining/bin/`. GPU mining is recommended; the miner runs on the host so it can use Metal / Vulkan / DirectX.
 
-If you already have a Planck-era `mining.conf`, switch with `./quantus-mining.sh config set CHAIN mainnet`, then `./quantus-mining.sh setup --force` so you get a v1.0.1+ node. Planck chain data is not reused.
+If you already have a Planck-era `mining.conf`, switch with `./quantus-mining.sh config set CHAIN mainnet`, then `./quantus-mining.sh setup --force` to download a v1.0.1+ node. `--force` refreshes binaries only — it keeps your existing `INNER_HASH` and wormhole address. Confirm with `./quantus-mining.sh config show` (`CHAIN=mainnet`, same masked inner hash). Planck chain data is not reused.
 
 The script checks the downloaded pair's `--help` output and only passes auth/TLS flags when **both** binaries support miner QUIC auth (`quantus-miner/2`). Mixing an auth-capable node with a pre-auth miner (or the reverse) is rejected. Pin a matching pair with `NODE_VERSION` / `MINER_VERSION` in `mining.conf` (or `./quantus-mining.sh config set NODE_VERSION <tag>`), then run `./quantus-mining.sh setup --force` to download those tags. Environment variables of the same name override the file. Unset pins fetch GitHub `releases/latest` independently and may not match.
 
