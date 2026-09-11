@@ -8,7 +8,7 @@ draft: true
 
 Quantus has a fixed 21,000,000 QTC supply. **27% is minted at genesis** (the premine) and almost all of it is vested. The remaining **73% is emitted to miners** via proof of work. There is no dev tax and no treasury cut of block rewards — each block's reward and standard fees go 100% to the miner.
 
-Source of truth: `runtime/src/genesis_config_presets/mainnet_vesting.rs` and `pallet_mining_rewards`.
+Source of truth: `runtime/src/genesis_config_presets/mainnet_vesting.rs`, `pallet_mining_rewards`, and `pallet_wormhole` volume-fee config.
 
 ## Supply
 
@@ -52,10 +52,24 @@ Mainnet `EmissionDivisor` is `50_000_000`. Rewards shrink as supply approaches t
 | Transaction type | Fee model |
 |------------------|-----------|
 | Standard transfer | Weight + length fees, plus optional tip → miner |
-| Wormhole exit | 4 bps volume fee: 50% burned, 50% miner |
+| Wormhole exit | Volume fee (below) |
 | High-security / reversible | 1% volume fee, burned (no miner split) |
 
-Burns on wormhole and high-security transfers offset some emission.
+### Wormhole volume fee
+
+Charged on wormhole **exits** (`VolumeFeeRateBps = 4`, i.e. 0.04%). There is no separate on-chain minimum exit amount.
+
+Settlement ceil-rounds once per accepted private segment, then sums those fees across a public batch. Small segments therefore pay at least one quantum (0.01 QTC); larger segments pay the headline rate.
+
+The fee is split in whole quanta:
+
+| Share | Rule |
+|-------|------|
+| Burn | `ceil(50% of fee)` — rounds against the miner; reduces `total_issuance` |
+| Miner | Remainder after the burn |
+| Aggregator (public batches only) | `floor(50% of the burn bucket)` redirected to the aggregator; leftover stays burned. The miner's share does not change. |
+
+If the miner cannot be credited (no author, or mint fails), that miner share is burned instead of dropped. A failed aggregator rebate stays in the burn bucket and does not revert the exit.
 
 ## Funding History
 
