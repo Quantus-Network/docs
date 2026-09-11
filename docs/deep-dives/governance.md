@@ -6,33 +6,31 @@ draft: true
 
 # Governance
 
-Quantus uses the Polkadot OpenGov governance model, adapted for a proof-of-work chain. Governance enables forkless runtime upgrades -- critical for a chain that may need to swap cryptographic primitives as PQC standards evolve.
-
-## Why Forkless Upgrades Matter
-
-If NIST deprecates ML-DSA-87 or a vulnerability is found in Poseidon2, Quantus can upgrade its runtime via on-chain governance without coordinating a hard fork. The Substrate framework compiles the runtime to WASM, and governance can schedule a runtime swap that all nodes automatically adopt.
-
-This is the key advantage over Bitcoin's upgrade model, where consensus changes require years of social coordination and miner signaling.
+Quantus governance is a **technical collective** that can pass runtime upgrades through tech referenda. The public conviction-voting / token-weighted lane was removed. Forkless WASM upgrades still matter: if NIST deprecates ML-DSA-87 or a Poseidon2 issue appears, the collective can schedule a runtime swap without a hard fork.
 
 ## Technical Collective
 
-A group of technically qualified members who can fast-track urgent protocol upgrades (security patches, critical bug fixes). The Technical Collective has its own referendum track with lower thresholds and shorter voting periods, enabling rapid response to security issues.
+A ranked collective of technically qualified members. They submit and vote on tech referenda (security patches, parameter changes, runtime upgrades). Tracks and curves are runtime constants — see `docs/TECH_COLLECTIVE_GOVERNANCE_TUNING.md` in the chain repo.
+
+Mainnet seeds 10 collective members (distinct from the 10 treasury signers). The treasury is a 6-of-10 multisig of those treasurers and is **not** paid from block rewards.
 
 ## Governance Components
 
 | Pallet | Purpose |
 |--------|---------|
-| `pallet-referenda` | Referendum management |
-| `pallet-referenda::Instance1` | Technical Collective referenda |
-| `pallet-conviction-voting` | Conviction-weighted vote tallying |
 | `pallet-ranked-collective` | Technical Collective membership |
+| `pallet-referenda` (Instance1, `TechReferenda`) | Technical Collective referenda |
 | `pallet-preimage` | Stores referendum proposal data |
-| `pallet-scheduler` | Executes approved referenda at scheduled blocks |
+| `pallet-scheduler` | Executes approved referenda (user scheduler calls are disabled) |
+| `pallet-custom-origins` | Dispatch origins for non-Root tech-referenda tracks (e.g. `FastUpgrade`) |
+| `pallet-treasury` | 6-of-10 treasury multisig |
+
+Removed (vacant pallet indices): community `Referenda`, `ConvictionVoting`, `pallet-sudo`, `pallet-recovery`.
 
 ## Key Source Code
 
 | Component | Path |
 |-----------|------|
-| Governance track definitions | `runtime/src/governance/definitions.rs` |
+| Runtime pallet list | `runtime/src/lib.rs` |
 | Runtime configuration | `runtime/src/configs/mod.rs` |
-| Scheduler (custom) | `pallets/scheduler/` |
+| Scheduler (custom, calls disabled) | `pallets/scheduler/` |

@@ -9,7 +9,7 @@ Quantus integrates with NEAR Protocol's chain abstraction infrastructure to enab
 
 ## Why NEAR?
 
-Quantus has a single native asset (QUAN) and no smart contracts. To interact with the broader crypto ecosystem (exchanges, DeFi, stablecoins), users need a bridge. NEAR's chain abstraction via **NEAR Intents** provides:
+Quantus has a single native asset (QTC) and no smart contracts. To interact with the broader crypto ecosystem (exchanges, DeFi, stablecoins), users need a bridge. NEAR's chain abstraction via **NEAR Intents** provides:
 
 - **Decentralized signing** -- MPC threshold signatures instead of a trusted bridge operator
 - **Cross-chain execution** -- Intent-based transactions that settle on both chains

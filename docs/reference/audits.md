@@ -32,12 +32,12 @@ Quantus's security model is layered across multiple boundaries:
 - **ZK proofs:** Plonky2 STARKs (no trusted setup), audit in progress
 
 ### Consensus Layer
-- **QPoW mining:** Double Poseidon2 hashing, audited by Eiger
+- **QPoW mining:** Poseidon2 squeeze-twice (512-bit), audited by Eiger
 - **Chain selection:** Heaviest-chain (cumulative work), not longest-chain
 - **Finalization:** Deterministic at 100 blocks behind best (`MaxReorgDepth`)
 
 ### Application Layer
-- **Replay protection:** 11-stage transaction extension pipeline (CheckNonce, CheckEra, CheckGenesis, etc.)
+- **Replay protection:** Signed-extension pipeline (CheckNonce, CheckEra, CheckGenesis, plus Quantus reversible / wormhole extensions)
 - **High-security accounts:** Mandatory delay periods with guardian cancellation
 - **Wormhole nullifiers:** Prevent double-spending of ZK proof-based transactions
 - **Forkless upgrades:** Governance can patch vulnerabilities without hard forks
