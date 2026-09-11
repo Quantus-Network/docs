@@ -49,12 +49,12 @@ sequenceDiagram
 
 ### How It Works
 
-1. Sender submits a transfer with a delay parameter (number of blocks)
+1. Sender dispatches `ReversibleTransfers::schedule_transfer_with_delay` with an explicit delay (number of blocks)
 2. Funds are held in a reversible-transfer escrow, not yet credited to the recipient
 3. During the delay window, the sender can cancel
 4. After the delay expires, the transfer executes automatically via the Scheduler pallet
 
-This is enforced in `ReversibleTransactionExtension` (before fee finalization), so it applies to any qualifying signed transfer.
+A normal `Balances` transfer is not intercepted. Delay is opt-in at the pallet. `ReversibleTransactionExtension` only classifies high-security signers and applies their whitelist, size/fee caps, and rolling quota.
 
 ### Use Cases
 
@@ -86,7 +86,7 @@ Other HS constraints:
 - High-security reversals pay a **1% volume fee, burned**
 - At most 16 signed extrinsics per rolling day (`MaxHighSecurityTxsPerWindow`)
 
-A single-key guardian shares that daily quota with its own traffic. A **multisig guardian** is recommended: the derived multisig address never signs an extrinsic, so the quota does not apply to it.
+Quota keys on the outer signer and applies only to high-security accounts. A normal guardian has no cap. A **single-key guardian that is itself high-security** shares the 16-per-window quota with its own traffic and can be locked out of `cancel` / `recover_funds` for up to a day. A **multisig guardian** is recommended: the derived address never signs, so the quota never applies to it — even if the multisig is high-security.
 
 ### Guardian System
 

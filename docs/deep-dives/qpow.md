@@ -52,7 +52,8 @@ flowchart TD
 | Block time | 12s target | `TARGET_BLOCK_TIME_MS = 12_000` |
 | Max reorg depth | 100 blocks | `MaxReorgDepth`; ~20 minutes at target |
 | Difficulty retarget | Every block | Ethereum Homestead-style, not EMA |
-| Max difficulty step | ±99/2048 (~4.8%) | Faster than 10s: +1/2048; 10–20s: unchanged; each extra 10s: −1/2048 |
+| Max difficulty increase | +1/2048 (~0.05%) | Observed time &lt; 10s (`adjustment = 1`) |
+| Max difficulty decrease | −99/2048 (~4.8%) | −1/2048 per extra 10s after 20s, floored at −99 |
 | Native token | QTC, 12 decimals | Max supply 21,000,000 |
 | SS58 prefix | 189 | Addresses start with `qz...` |
 

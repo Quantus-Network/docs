@@ -37,7 +37,7 @@ sequenceDiagram
 1. **Burn**: User sends coins to an unspendable wormhole address computed as `H(H(salt|secret))` where H is Poseidon2
 2. **Prove**: User generates a ZK proof (off-chain) demonstrating they know the preimage that maps to the wormhole address, without revealing it
 3. **Aggregate**: Multiple users' proofs are recursively composed into a single aggregated proof using Plonky2
-4. **Verify**: The aggregated proof (~100KB regardless of transaction count) is submitted on-chain
+4. **Verify**: The aggregated proof is submitted on-chain. Current fixtures serialize to **~151 KB** (private batch) and **~224 KB** (public batch); those sizes come from the compiled circuit, not a linear per-transfer cost. The table below is amortized on-chain payload, including public inputs.
 5. **Mint**: The on-chain verifier validates the proof and mints coins to the specified exit addresses. Exits pay a **4 bps volume fee** (ceil-rounded per private segment; 50% burned, remainder to the miner; public batches may rebate half of the burn bucket to the aggregator).
 
 ## Performance Impact
