@@ -36,7 +36,7 @@ These docs follow a layered depth model: start broad, go deep where it matters t
 
 ## Quick Links
 
-- [Tools and Community](./reference/tools-and-community): Explorer, telemetry, faucet, socials, and all external links
+- [Tools and Community](./reference/tools-and-community): Explorer, telemetry, wallet, socials, and all external links
 - [GitHub Organization](https://github.com/Quantus-Network): All repositories
 - [Whitepaper](https://quantus.com/whitepaper)
 - [Research Forum](https://research.quantus.com)

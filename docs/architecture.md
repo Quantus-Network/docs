@@ -27,11 +27,12 @@ graph TB
 
     subgraph Runtime["Runtime Layer (WASM)"]
         Core["Core Pallets<br/>System, Balances, Timestamp"]
-        QPow["QPoW Pallet<br/>Difficulty, Mining Rewards"]
+        QPow["QPoW Pallet<br/>Difficulty retarget"]
+        MiningRewards["Mining Rewards Pallet<br/>Emission, miner payout"]
         Wormhole["Wormhole Pallet<br/>ZK Proof Verification"]
-        Safety["Safety Pallets<br/>Reversible Transfers,<br/>High-Security Accounts,<br/>Recovery"]
-        Gov["Governance<br/>OpenGov, Conviction Voting,<br/>Technical Collective"]
-        Treasury["Treasury<br/>Fee Distribution"]
+        Safety["Safety Pallets<br/>Reversible Transfers,<br/>High-Security Accounts"]
+        Gov["Governance<br/>Tech Collective,<br/>Tech Referenda"]
+        Treasury["Treasury<br/>6-of-10 multisig"]
     end
 
     subgraph Crypto["Cryptographic Primitives"]
@@ -77,9 +78,9 @@ The WASM-compiled state transition function, built using FRAME pallets. This is 
 - **Wormhole:** ZK proof verification for privacy-preserving transfers
 - **Reversible Transfers:** Optional cancellation windows and high-security account protection
 - **Multisig:** Multi-signature accounts with guardian oversight
-- **Recovery:** Onchain survivorship (social recovery / "crypto will")
-- **Governance:** Polkadot OpenGov with conviction voting and technical collective
-- **Treasury:** Fee collection and distribution
+- **Governance:** Technical collective + tech referenda (the public conviction-voting lane was removed)
+- **Treasury:** 6-of-10 multisig. Not paid from block rewards or standard fees.
+- **Vesting:** Genesis allocation schedules (27% of max supply)
 
 ### Cryptographic Primitives
 
@@ -173,7 +174,7 @@ flowchart LR
 
 **Why no smart contracts?** Quantus is money, not a general-purpose compute platform. Limiting scope reduces attack surface and allows optimization for the specific use case of quantum-secure value transfer.
 
-**Why fixed 21M supply?** Bitcoin's monetary model works. Quantus uses smooth exponential decay emission (`Reward = (MaxSupply - CurrentSupply) / K`) instead of Bitcoin's abrupt halvings, avoiding the mining incentive cliffs that halvings create.
+**Why fixed 21M supply?** Bitcoin's monetary model works. 27% is minted at genesis (vested). The rest is emitted to miners with smooth exponential decay (`Reward = (MaxSupply - CurrentSupply) / K`) instead of Bitcoin's abrupt halvings. There is no mining-time dev tax.
 
 ## Next Steps
 
