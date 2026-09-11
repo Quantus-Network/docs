@@ -102,7 +102,7 @@ Traditional PQC adoption faces a fundamental scaling crisis:
 - Bitcoin ECDSA signature: **~65 bytes**
 - ML-DSA-87 (Dilithium) signature: **~4,627 bytes** (70x larger)
 
-If Bitcoin simply swapped to PQC signatures, throughput would drop from ~7 TPS to a fraction of that. Every block would be consumed by signature data.
+If Bitcoin simply swapped to PQC signatures with no block-size change, the [whitepaper](https://quantus.com/whitepaper) puts its quantum-secure throughput (QTPS) at about 1.1, down from ~10 TPS. Every block would be consumed by signature data.
 
 ## Quantus's Solution: Wormhole Addresses
 
@@ -110,10 +110,16 @@ Quantus solves the signature bloat problem with aggregated ZK proofs:
 
 1. User burns coins to an unspendable **wormhole address** derived from `H(H(salt|secret))`
 2. User generates a ZK proof (using Plonky2) that they know the preimage
-3. Thousands of these proofs are **aggregated** into a single ~100KB proof
+3. Batches of proofs are **aggregated** into a compact Plonky2 proof
 4. The aggregated proof is posted onchain, verifying all transactions at once
 
-**Result:** Raw PQC throughput of ~685 TPS is amplified to **~3,800 TPS** (~5.5x improvement).
+Block space is the bound: **12-second** target block time and **3.75 MB** of transactions per block. Every Quantus transaction is post-quantum, so TPS and QTPS are the same number ([whitepaper](https://quantus.com/whitepaper)):
+
+| Mode | Transfers / block | QTPS |
+|------|-------------------|------|
+| Transparent, ML-DSA-87 | ~510 | **~43** |
+| Encrypted, current two-layer aggregation | ~5,200 | **~430** |
+| Encrypted, theoretical ceiling | ~33,000 | **~2,800** |
 
 The privacy benefit is a side effect: the link between the original sender and the exit address is broken onchain (similar to Tornado Cash's mechanism). Amounts and exit addresses are visible; the sender-receiver link is not.
 
