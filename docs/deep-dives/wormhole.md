@@ -38,7 +38,7 @@ sequenceDiagram
 2. **Prove**: User generates a ZK proof (off-chain) demonstrating they know the preimage that maps to the wormhole address, without revealing it
 3. **Aggregate**: Multiple users' proofs are recursively composed into a single aggregated proof using Plonky2
 4. **Verify**: The aggregated proof (~100KB regardless of transaction count) is submitted on-chain
-5. **Mint**: The on-chain verifier validates the proof and mints coins to the specified exit addresses. Exits pay a **4 bps volume fee** (ceil-rounded per private segment; 50% burned, remainder to the miner; public batches may rebate half of the burn bucket to the aggregator). See [Tokenomics](../reference/tokenomics.md).
+5. **Mint**: The on-chain verifier validates the proof and mints coins to the specified exit addresses. Exits pay a **4 bps volume fee** (ceil-rounded per private segment; 50% burned, remainder to the miner; public batches may rebate half of the burn bucket to the aggregator).
 
 ## Performance Impact
 
