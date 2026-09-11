@@ -134,7 +134,7 @@ Poseidon2 uses arithmetic operations over prime fields, which map directly to ZK
 
 - **Block headers** -- All block hashes use `PoseidonHasher`
 - **Storage trie** -- State trie uses Poseidon for ZK-compatible storage proofs
-- **QPoW mining** -- Double Poseidon2 hashing for proof-of-work
+- **QPoW mining** -- Poseidon2 squeeze-twice over `header_hash \|\| nonce` (512-bit)
 - **Wormhole circuits** -- Merkle proof verification inside ZK proofs
 
 **Sources:** [qp-poseidon](https://github.com/Quantus-Network/qp-poseidon), [qp-poseidon-constants](https://github.com/Quantus-Network/qp-poseidon-constants)

@@ -32,7 +32,7 @@ Quantus's security model is layered across multiple boundaries:
 - **ZK proofs:** Plonky2 STARKs (no trusted setup), audit in progress
 
 ### Consensus Layer
-- **QPoW mining:** Double Poseidon2 hashing, audited by Eiger
+- **QPoW mining:** Poseidon2 squeeze-twice (512-bit), audited by Eiger
 - **Chain selection:** Heaviest-chain (cumulative work), not longest-chain
 - **Finalization:** Deterministic at 100 blocks behind best (`MaxReorgDepth`)
 

@@ -78,7 +78,7 @@ The `key quantus --scheme wormhole` command outputs three values the user must s
 
 ## Step 3: Configure Mining Resources
 
-Per repo preference: **always recommend GPU mining** and **always ask about resource allocation before starting the miner**. GPU produces ~500-1000 MH/s vs ~15 MH/s per CPU worker.
+Per repo preference: **always recommend GPU mining** and **always ask about resource allocation before starting the miner**. The built-in CPU loop is for testing; GPU mining is much faster.
 
 Detect CPU cores:
 ```bash

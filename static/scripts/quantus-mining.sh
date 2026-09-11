@@ -496,7 +496,7 @@ prompt_resource_allocation() {
   cores="$(cpu_count)"
   echo ""
   echo "This machine has ${cores} CPU cores."
-  echo "GPU mining is strongly recommended (~500-1000 MH/s vs ~15 MH/s per CPU worker)."
+  echo "GPU mining is strongly recommended (much faster than the built-in CPU loop)."
   read -r -p "Do you have a GPU available for mining? (y/N): " has_gpu
 
   case "$(tolower "$has_gpu")" in
