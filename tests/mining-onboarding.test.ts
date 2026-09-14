@@ -1,7 +1,8 @@
 import {describe, expect, test} from 'bun:test';
 import {createHash} from 'node:crypto';
-import {existsSync, readFileSync} from 'node:fs';
-import {resolve} from 'node:path';
+import {existsSync, mkdtempSync, readFileSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join, resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 
 const root = resolve(import.meta.dir, '..');
@@ -495,6 +496,44 @@ describe('desktop launcher', () => {
     const p = resolve(root, 'static/scripts/quantus-mining-app.ps1').replaceAll('\\', '\\\\');
     const r = runPowerShell(`$t=$null;$e=$null;[System.Management.Automation.Language.Parser]::ParseFile('${p}',[ref]$t,[ref]$e)|Out-Null;$e.Count`);
     expect(r.stdout.trim()).toBe('0');
+  });
+});
+
+describe('earnings and cooler', () => {
+  const app = readFileSync(resolve(root, 'static/scripts/quantus-mining-app.ps1'), 'utf8');
+
+  test.skipIf(!powershell)('reward address becomes the right chain storage key', () => {
+    // Pull the C# source out of the launcher in TypeScript, so no regex has to
+    // survive two layers of shell quoting, then compile it in PowerShell.
+    const codec = app.match(/\$script:ChainCodec = @'\r?\n([\s\S]*?)\r?\n'@/)?.[1];
+    expect(codec).toBeDefined();
+    const dir = mkdtempSync(join(tmpdir(), 'qm-codec-'));
+    const file = join(dir, 'codec.cs');
+    writeFileSync(file, codec as string);
+    const r = runPowerShell(
+      `Add-Type -TypeDefinition (Get-Content -Raw '${file.replaceAll("'", "''")}') -ReferencedAssemblies System.Numerics; ` +
+      `$abc = ([BitConverter]::ToString([QuantusCodec]::Blake2b([Text.Encoding]::ASCII.GetBytes('abc'), 64)) -replace '-','').ToLower(); ` +
+      `$k = [QuantusCodec]::AccountKey('qzmtKfCXKHvhg5agvp1XKgx8ymuShQzNhJ8ZrpKCqy4Y5z6HW'); ` +
+      `$bad = [QuantusCodec]::AccountKey('qzmtKfCXKHvhg5agvp1XKgx8ymuShQzNhJ8ZrpKCqy4Y5z6HX'); ` +
+      `$abc.Substring(0,16) + '|' + $k + '|' + ($null -eq $bad)`,
+    );
+    expect(r.stdout.trim()).toBe(
+      'ba80a53f981c4d0d|0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da90011389c567e522ec0243da4da14949b6b9a83572fc2c78278c23c696d8b7546b96517cad7f652bd6bc592cb2deb6263|True',
+    );
+  });
+
+  test('earnings come from the node balance and a price, never an estimate', () => {
+    expect(app).toContain('state_getStorage');
+    expect(app).toContain('api.coingecko.com/api/v3/simple/price?ids=quantus');
+    expect(app).not.toMatch(/blocks won/i);
+  });
+
+  test('cooler maps to a validated installer setting passed to the miner', () => {
+    expect(app).toContain('config set GPU_THROTTLE_MS');
+    expect(ps1).toContain("'--gpu-throttle-ms'");
+    expect(script).toContain('--gpu-throttle-ms');
+    const r = runBash(`source '${shellScriptPath}'; valid_config_value GPU_THROTTLE_MS 30 && echo a; valid_config_value GPU_THROTTLE_MS 5000 || echo b; valid_config_value GPU_THROTTLE_MS '1;id' || echo c`);
+    expect(r.stdout.replace(/\s+/g, '')).toBe('abc');
   });
 });
 

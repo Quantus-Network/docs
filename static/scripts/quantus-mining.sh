@@ -56,7 +56,7 @@ readonly COMPATIBILITY_URL="${QUANTUS_COMPATIBILITY_URL:-https://docs.quantus.co
 
 readonly CHAIN_REPO="Quantus-Network/chain"
 readonly MINER_REPO="Quantus-Network/quantus-miner"
-readonly EDITABLE_KEYS="NODE_NAME CPU_WORKERS GPU_DEVICES MINER_LISTEN_PORT"
+readonly EDITABLE_KEYS="NODE_NAME CPU_WORKERS GPU_DEVICES MINER_LISTEN_PORT GPU_THROTTLE_MS"
 
 OS=""
 ARCH=""
@@ -575,6 +575,7 @@ write_config() {
   MINER_LISTEN_PORT="${MINER_LISTEN_PORT:-9833}"
   CPU_WORKERS="${CPU_WORKERS:-0}"
   GPU_DEVICES="${GPU_DEVICES:-0}"
+  GPU_THROTTLE_MS="${GPU_THROTTLE_MS:-0}"
 
   cat > "$CONFIG_FILE" <<EOF
 # Quantus mining configuration - ${CONFIG_FILE}
@@ -588,6 +589,7 @@ CHAIN="${CHAIN}"
 MINER_LISTEN_PORT=${MINER_LISTEN_PORT}
 CPU_WORKERS=${CPU_WORKERS}
 GPU_DEVICES=${GPU_DEVICES}
+GPU_THROTTLE_MS=${GPU_THROTTLE_MS}
 NODE_VERSION="${NODE_VERSION}"
 MINER_VERSION="${MINER_VERSION}"
 MINER_PROTOCOL="${MINER_PROTOCOL:-}"
@@ -612,6 +614,7 @@ load_config() {
   MINER_LISTEN_PORT="${MINER_LISTEN_PORT:-9833}"
   CPU_WORKERS="${CPU_WORKERS:-0}"
   GPU_DEVICES="${GPU_DEVICES:-0}"
+  GPU_THROTTLE_MS="${GPU_THROTTLE_MS:-0}"
 }
 
 process_alive() {
@@ -964,6 +967,10 @@ valid_config_value() {
   local key="$1" value="$2"
   case "$key" in
     NODE_NAME) valid_node_name "$value" ;;
+    GPU_THROTTLE_MS)
+      case "$value" in ''|*[!0-9]*) return 1 ;; esac
+      [ "$value" -le 1000 ]
+      ;;
     CPU_WORKERS|GPU_DEVICES)
       case "$value" in ''|*[!0-9]*) return 1 ;; esac
       [ "$value" -le 256 ]
@@ -1171,6 +1178,7 @@ cmd_config() {
         NODE_NAME) NODE_NAME="$value" ;;
         CPU_WORKERS) CPU_WORKERS="$value" ;;
         GPU_DEVICES) GPU_DEVICES="$value" ;;
+        GPU_THROTTLE_MS) GPU_THROTTLE_MS="$value" ;;
         MINER_LISTEN_PORT) MINER_LISTEN_PORT="$value" ;;
       esac
       write_config
@@ -1248,6 +1256,7 @@ run_quantus_miner() {
     "$MINER_BIN" serve \
       --cpu-workers "$CPU_WORKERS" \
       --gpu-devices "$GPU_DEVICES" \
+      --gpu-throttle-ms "${GPU_THROTTLE_MS:-0}" \
       --node-addr "127.0.0.1:${MINER_LISTEN_PORT}"
     return
   fi
@@ -1260,6 +1269,7 @@ run_quantus_miner() {
   "$MINER_BIN" serve \
     --cpu-workers "$CPU_WORKERS" \
     --gpu-devices "$GPU_DEVICES" \
+    --gpu-throttle-ms "${GPU_THROTTLE_MS:-0}" \
     --node-addr "127.0.0.1:${MINER_LISTEN_PORT}" \
     --auth-token-file "$token_file" \
     --tls-cert-sha256-file "$pin_file"

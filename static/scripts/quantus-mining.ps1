@@ -94,7 +94,7 @@ $script:CompatibilityUrl = if ($env:QUANTUS_COMPATIBILITY_URL) { $env:QUANTUS_CO
 
 $script:ChainRepo = 'Quantus-Network/chain'
 $script:MinerRepo = 'Quantus-Network/quantus-miner'
-$script:EditableKeys = @('NODE_NAME', 'CPU_WORKERS', 'GPU_DEVICES', 'MINER_LISTEN_PORT')
+$script:EditableKeys = @('NODE_NAME', 'CPU_WORKERS', 'GPU_DEVICES', 'MINER_LISTEN_PORT', 'GPU_THROTTLE_MS')
 
 # Only x64 Windows has published release assets. ARM64 Windows can run the
 # x64 binaries under emulation, and the miner would still not see the GPU
@@ -422,6 +422,7 @@ function Write-Config {
     "MINER_LISTEN_PORT=$($c['MINER_LISTEN_PORT'])",
     "CPU_WORKERS=$($c['CPU_WORKERS'])",
     "GPU_DEVICES=$($c['GPU_DEVICES'])",
+    "GPU_THROTTLE_MS=$($c['GPU_THROTTLE_MS'])",
     "NODE_VERSION=$($c['NODE_VERSION'])",
     "MINER_VERSION=$($c['MINER_VERSION'])",
     "MINER_PROTOCOL=$($c['MINER_PROTOCOL'])"
@@ -445,7 +446,7 @@ function Read-Config {
   }
   $c['_innerHash'] = (Get-Content $script:InnerHashFile -Raw).Trim()
   if (-not $c['_innerHash']) { Fail "Reward preimage file is empty. Re-run $($script:RunHint) setup -Force." }
-  foreach ($pair in @(@('CHAIN', 'mainnet'), @('MINER_LISTEN_PORT', '9833'), @('CPU_WORKERS', '0'), @('GPU_DEVICES', '0'), @('NODE_KEY_FILE', 'node_key.p2p'))) {
+  foreach ($pair in @(@('CHAIN', 'mainnet'), @('MINER_LISTEN_PORT', '9833'), @('CPU_WORKERS', '0'), @('GPU_DEVICES', '0'), @('GPU_THROTTLE_MS', '0'), @('NODE_KEY_FILE', 'node_key.p2p'))) {
     if (-not $c.ContainsKey($pair[0])) { $c[$pair[0]] = $pair[1] }
   }
   $script:Config = $c
@@ -556,6 +557,9 @@ function Get-MinerLaunchArgs {
     '--gpu-devices', $c['GPU_DEVICES'],
     '--node-addr', "127.0.0.1:$($c['MINER_LISTEN_PORT'])"
   )
+  # A pause between GPU batches. It lowers heat and power at some cost in speed,
+  # which on a laptop that is already thermal-throttling costs less than it looks.
+  if ($c.ContainsKey('GPU_THROTTLE_MS') -and [int]$c['GPU_THROTTLE_MS'] -gt 0) { $launch += @('--gpu-throttle-ms', $c['GPU_THROTTLE_MS']) }
   if ($script:MinerProtocol -eq 'auth') {
     $token = Get-MinerAuthTokenPath; $pin = Get-MinerTlsPinPath
     if (-not (Test-Path $token)) { Fail "Miner auth token not found at $token. Start the node first and wait until it is listening." }
@@ -639,6 +643,7 @@ function Test-ConfigValue([string]$Key, [string]$Value) {
   switch ($Key) {
     'NODE_NAME' { return (Test-NodeName $Value) }
     { $_ -in 'CPU_WORKERS', 'GPU_DEVICES' } { return ($Value -match '^\d{1,3}$' -and [int]$Value -le 256) }
+    'GPU_THROTTLE_MS' { return ($Value -match '^\d{1,4}$' -and [int]$Value -le 1000) }
     'MINER_LISTEN_PORT' { return ($Value -match '^\d{4,5}$' -and [int]$Value -ge 1024 -and [int]$Value -le 65535) }
     default { return $false }
   }
