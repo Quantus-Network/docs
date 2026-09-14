@@ -19,6 +19,8 @@ The agent handles setup and checks. Enter wallet recovery words only in your pri
 
 ## Before you start
 
+Have **100 GB free on the node data drive**, as specified by the [pinned node guide](https://github.com/Quantus-Network/chain/blob/v0.10.0/MINING.md#system-requirements). Windows setup checks this before downloads or wallet entry. `preflight` checks Windows platform and storage without starting anything. To use another drive, set `QUANTUS_NODE_DATA_PATH` to your chosen data folder in the same shell before setup and future starts.
+
 You need a Quantus wallet with its 24-word recovery phrase. Keep that phrase offline. Never paste it into chat, email, a support ticket, or a command.
 
 There are two verified installers, one per shell, and they behave identically: `quantus-mining.sh` for macOS, Linux x64, and WSL2, and `quantus-mining.ps1` for native Windows 10/11 x64. Both read the same [compatibility manifest](/mining-compatibility.json), verify the same checksums, ask for the recovery phrase the same way, and print the same status. On Windows, use PowerShell rather than WSL2: the miner needs the native graphics driver to use the GPU. The [desktop Miner App](/guides/miner-app) remains a preview and is not the verified path.
@@ -123,12 +125,12 @@ The manifest currently publishes minimum OS versions as `not-published`. That is
 | Checksum failed | Delete the named download and run the verified installer again. |
 | Unsupported platform | Use macOS, Linux x64, or 64-bit Windows 10/11. Windows on ARM has no published binaries. |
 | PowerShell refuses to run the script | Run `Unblock-File .\quantus-mining.ps1`, or start it with `powershell -ExecutionPolicy Bypass -File .\quantus-mining.ps1 mine`. |
-| Windows: sync shows peers but the block number is not moving | Windows Defender is scanning the chain database. Run once in an elevated PowerShell: `Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\quantus-node"`, then `.\quantus-mining.ps1 restart-check`. |
+| Windows: sync shows peers but the block number is not moving | Check free disk space, peer connectivity and disk activity, then compare block progress with `status`. Do not disable antivirus protection or add exclusions as a default fix. |
 | Installed pair is stale | Run `./quantus-mining.sh setup --force`. |
 | Node or miner stopped | Run `./quantus-mining.sh mine`. |
 | Sync still says `Syncing` | Leave the process running and check `status` later. |
 | macOS blocks a binary | Run `xattr -d com.apple.quarantine ~/quantus-mining/bin/quantus-node ~/quantus-mining/bin/quantus-miner`. |
-| No hash rate after sync | Run `./quantus-mining.sh setup --force` to restore the supported pair. |
+| No hash rate after sync | Run `status` and check the reported miner/protocol error. If the miner stopped, use `mine`. Do not reinstall or repeat wallet entry without diagnosing the failure. |
 | Computer is sluggish | Run `./quantus-mining.sh config set CPU_WORKERS 1`, then `./quantus-mining.sh restart-check`. |
 
 For protocol development and manual commands, use the chain repository's [MINING.md](https://github.com/Quantus-Network/chain/blob/main/MINING.md). Report reproducible defects in [GitHub Issues](https://github.com/Quantus-Network/chain/issues).

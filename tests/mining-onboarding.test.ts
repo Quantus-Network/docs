@@ -259,10 +259,12 @@ describe('windows installer', () => {
   test('guide and skill point Windows users at the PowerShell installer', () => {
     for (const content of [guide, skill]) {
       expect(content).toContain('quantus-mining.ps1 mine');
-      expect(content).toContain('Add-MpPreference -ExclusionPath');
+      expect(content).not.toContain('Add-MpPreference');
+      expect(content).toContain('Do not disable antivirus protection');
     }
     expect(guide).toContain('quantus-mining.ps1.sha256');
     expect(guide).toContain('Unblock-File');
+    expect(ps1).not.toContain('Add-MpPreference');
     expect(guide).not.toMatch(/Invoke-WebRequest[^\n]*\|\s*(iex|Invoke-Expression)/i);
   });
 
@@ -279,6 +281,20 @@ describe('windows installer', () => {
     expect(result.status).toBe(0);
     expect(result.stdout.trim()).toBe('0');
   });
+
+  test.skipIf(!powershell)('checks setup storage before downloads or wallet entry', () => {
+    const load = `. '${ps1Path.replaceAll('\\', '\\\\')}'; `;
+    const low = runPowerShell(load + 'function Get-AvailableStorageBytes { 99999999999L }; Test-SetupStorage');
+    expect(low.status).not.toBe(0);
+    expect(low.stderr).toContain('100 GB required');
+    const enough = runPowerShell(load + 'function Get-AvailableStorageBytes { 100000000000L }; Test-SetupStorage');
+    expect(enough.status).toBe(0);
+    expect(enough.stdout).toContain('at least 100 GB');
+    const setup = ps1.slice(ps1.indexOf('function Invoke-Setup'), ps1.indexOf('function Invoke-Config'));
+    expect(setup.indexOf('Test-SetupStorage')).toBeLessThan(setup.indexOf('Ensure-Dirs'));
+    expect(setup.indexOf('Test-SetupStorage')).toBeLessThan(setup.indexOf('Install-Binaries'));
+    expect(setup.indexOf('Test-SetupStorage')).toBeLessThan(setup.indexOf('New-WormholeKeys'));
+  }, 10_000);
 
   test.skipIf(!powershell)('loads the pinned pair, classifies protocols, fails closed, and redacts', () => {
     const load = `. '${ps1Path.replaceAll('\\', '\\\\')}'; `;

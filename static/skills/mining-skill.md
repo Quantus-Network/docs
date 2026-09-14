@@ -76,12 +76,12 @@ Do not mark the task complete unless it prints `Restart recovery: PASSED` and th
 | Checksum mismatch | Delete the named download and rerun the verified block. |
 | Unsupported platform | Move to macOS, Linux x64, or 64-bit Windows 10/11. |
 | PowerShell will not run the script | `Unblock-File .\quantus-mining.ps1`, or start it with `powershell -ExecutionPolicy Bypass -File`. |
-| Windows sync has peers but the block number is not moving | Ask the user to run once, in an elevated PowerShell: `Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\quantus-node"`, then `restart-check`. |
+| Windows sync has peers but the block number is not moving | Check free disk space, peer connectivity and disk activity, then compare block progress with `status`. Do not disable antivirus protection or add exclusions as a default fix. |
 | Pair mismatch | Run `./quantus-mining.sh setup --force`. |
 | Node or miner stopped | Run `./quantus-mining.sh mine`. |
 | Still syncing | Leave it running and check `status` later. |
 | Machine sluggish | Set `CPU_WORKERS` to 1 and run `restart-check`. |
-| No hash rate after sync | Run `setup --force` to reinstall the supported pair. |
+| No hash rate after sync | Run `status` and diagnose the miner/protocol error. If stopped, use `mine`. Do not reinstall or repeat wallet entry without diagnosing the failure. |
 
 ## Completion report
 

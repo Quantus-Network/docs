@@ -407,6 +407,25 @@ function Get-NodeDataPath {
   return Join-Path $env:LOCALAPPDATA 'quantus-node'
 }
 
+function Get-AvailableStorageBytes {
+  $path = [IO.Path]::GetFullPath((Get-NodeDataPath))
+  $root = [IO.Path]::GetPathRoot($path)
+  $drive = New-Object IO.DriveInfo($root)
+  if (-not $drive.IsReady) { Fail "Data drive is not ready: $root" }
+  return $drive.AvailableFreeSpace
+}
+
+function Test-SetupStorage {
+  # The pinned node v0.10.0 MINING.md specifies 100 GB available for setup.
+  $required = 100000000000L
+  try { $available = Get-AvailableStorageBytes } catch { Fail 'Cannot measure free storage. Choose an available local data drive using QUANTUS_NODE_DATA_PATH.' }
+  if ($available -lt $required) {
+    $gb = [math]::Round($available / 1000000000, 1)
+    Fail "Storage: $gb GB free; 100 GB required for setup. Free space or set QUANTUS_NODE_DATA_PATH to a larger drive. No downloads or wallet input were started."
+  }
+  Info 'Storage: at least 100 GB free on the selected data drive.'
+}
+
 function Get-NodeChainDir { return Join-Path (Get-NodeDataPath) "chains\$($script:Config['CHAIN'])" }
 function Get-MinerAuthTokenPath { return Join-Path (Get-NodeChainDir) 'miner-auth-token' }
 function Get-MinerTlsPinPath { return Join-Path (Get-NodeChainDir) 'miner-tls-cert-sha256' }
@@ -570,6 +589,7 @@ Working directory: $($script:MiningDir)
 Config file:       $($script:ConfigFile)
 
 Commands:
+  preflight                 Check Windows platform and setup storage without wallet input
   mine                      Set up if needed, start in background, and show status
   setup [-Force]            Interactive setup: download binaries, generate keys, write config
   config show               Show non-secret configuration
@@ -589,16 +609,16 @@ Environment:
   QUANTUS_NODE_DATA_PATH    Node --base-path (default: $env:LOCALAPPDATA\quantus-node)
   QUANTUS_COMPATIBILITY_URL Official compatibility manifest ($($script:CompatibilityUrl))
 
-One-time Windows note:
-  Windows Defender real-time scanning can stall chain sync on the node's
-  database. If status shows peers but the block number is not moving, run this
-  once in an elevated PowerShell (Run as administrator):
-    Add-MpPreference -ExclusionPath "$(Get-NodeDataPath)"
+If sync stalls:
+  Check free disk space, peer connectivity and disk activity first.
+  Do not disable antivirus protection or add exclusions as a default fix.
+  Run status again to compare block progress before restarting.
 "@ | Write-Output
 }
 
 function Invoke-Setup {
   Test-Platform
+  Test-SetupStorage
   Ensure-Dirs
   Info "Platform: windows / x64 ($($script:NodeTarget))"
   Info "Working directory: $($script:MiningDir)"
@@ -635,7 +655,7 @@ function Invoke-Setup {
   Info 'Setup complete.'
   Info "Start mining with: $($script:ScriptName) mine"
   Info 'Telemetry dashboard: https://telemetry.quantus.cat/'
-  Info 'If sync later stalls with peers connected, see the Defender note in: quantus-mining.ps1 help'
+  Info 'If sync stalls, check free disk space and run status again to compare block progress.'
 }
 
 function Invoke-Config([string[]]$Args) {
@@ -765,9 +785,9 @@ Restart recovery: Run $($script:ScriptName) restart-check
     'STOPPED' { Info "Recovery: run $($script:ScriptName) mine to start the verified pair." }
     default {
       if ($syncState -eq 'Stalled') {
-        Info 'Recovery: sync has peers but is not advancing. Windows Defender is the usual cause. Run once, in an elevated PowerShell:'
-        Info "  Add-MpPreference -ExclusionPath `"$(Get-NodeDataPath)`""
-        Info "Then run: $($script:ScriptName) restart-check"
+        Info 'Recovery: check free disk space, peer connectivity and disk activity. The cause is not yet diagnosed.'
+        Info 'Do not disable antivirus protection or add exclusions as a default fix.'
+        Info "Compare progress with: $($script:ScriptName) status"
       } else {
         Info "Recovery: wait for sync, then run $($script:ScriptName) status again."
       }
@@ -825,6 +845,7 @@ function Invoke-Uninstall {
 
 if ($MyInvocation.InvocationName -ne '.') {
   switch ($Command) {
+    'preflight' { Test-Platform; Test-SetupStorage }
     'mine' { Invoke-Mine }
     'setup' { Invoke-Setup }
     'config' { Invoke-Config $Rest }
