@@ -61,7 +61,7 @@ The installer selects the published pair from the [compatibility manifest](/mini
 
 The prompt is hidden. The phrase is used locally to derive your wormhole reward address, then discarded. It is not saved, logged, sent over the network, or placed in command history.
 
-The installer names the node, detects a conservative CPU or GPU configuration, starts both processes, and prints status. Initial chain sync downloads and executes every block, which is the only sync mode the node supports. Mainnet is young, so today that is minutes rather than hours, and it grows with the chain. The miner starts working the moment the node reports it is synced.
+The installer asks what to call your miner. That name is shown publicly on the telemetry dashboard, so avoid your real name. It then detects a conservative CPU or GPU configuration, starts both processes, and prints status. Initial chain sync downloads and executes every block, which is the only sync mode the node supports. Mainnet is young, so today that is minutes rather than hours, and it grows with the chain. The miner starts working the moment the node reports it is synced.
 
 ## Know when it works
 

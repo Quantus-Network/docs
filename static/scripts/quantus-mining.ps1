@@ -575,6 +575,49 @@ function Confirm-StartPrerequisites {
 # Status helpers
 # ---------------------------------------------------------------------------
 
+# mining.conf values are also shown publicly (the node name, on telemetry) and
+# passed to the node on its command line, so every editable value is checked.
+function Test-NodeName([string]$Name) {
+  return ($Name -cmatch '^[a-z0-9](?:[a-z0-9-]{1,30})[a-z0-9]$')
+}
+
+function Test-ConfigValue([string]$Key, [string]$Value) {
+  switch ($Key) {
+    'NODE_NAME' { return (Test-NodeName $Value) }
+    { $_ -in 'CPU_WORKERS', 'GPU_DEVICES' } { return ($Value -match '^\d{1,3}$' -and [int]$Value -le 256) }
+    'MINER_LISTEN_PORT' { return ($Value -match '^\d{4,5}$' -and [int]$Value -ge 1024 -and [int]$Value -le 65535) }
+    default { return $false }
+  }
+}
+
+function Get-DefaultNodeName {
+  $h = ($env:COMPUTERNAME.ToLowerInvariant() -replace '[^a-z0-9-]', '').Trim('-')
+  if ($h.Length -gt 24) { $h = $h.Substring(0, 24).Trim('-') }
+  if ($h -and (Test-NodeName "quantus-$h")) { return "quantus-$h" }
+  return 'quantus-miner'
+}
+
+# Asks for the public telemetry name. QUANTUS_NODE_NAME answers it without a
+# prompt, and a non-interactive session (an agent, CI) takes the default instead
+# of blocking on input nobody can give.
+function Select-NodeName {
+  $default = Get-DefaultNodeName
+  if ($env:QUANTUS_NODE_NAME) {
+    if (-not (Test-NodeName $env:QUANTUS_NODE_NAME)) { Fail 'QUANTUS_NODE_NAME must be 3-32 lowercase letters, digits and hyphens.' }
+    return $env:QUANTUS_NODE_NAME
+  }
+  if (-not [Environment]::UserInteractive -or [Console]::IsInputRedirected) { return $default }
+  Write-Output ''
+  Info "Your miner's name is shown publicly on https://telemetry.quantus.cat/."
+  Info 'Use lowercase letters, numbers and hyphens. Avoid your real name.'
+  while ($true) {
+    $answer = Read-Host "Miner name [$default]"
+    $answer = if ([string]::IsNullOrWhiteSpace($answer)) { $default } else { $answer.Trim().ToLowerInvariant() }
+    if (Test-NodeName $answer) { return $answer }
+    Warn 'Use 3-32 lowercase letters, numbers and hyphens, not starting or ending with a hyphen.'
+  }
+}
+
 function Invoke-NodeRpc([string]$Method) {
   $body = '{"jsonrpc":"2.0","id":1,"method":"' + $Method + '","params":[]}'
   try {
@@ -681,9 +724,7 @@ function Invoke-Setup {
     return
   }
 
-  $host_ = ($env:COMPUTERNAME.ToLowerInvariant() -replace '[^a-z0-9-]', '')
-  if ($host_.Length -gt 24) { $host_ = $host_.Substring(0, 24) }
-  $script:Config['NODE_NAME'] = if ($host_) { "quantus-$host_" } else { 'quantus-miner' }
+  $script:Config['NODE_NAME'] = Select-NodeName
   Info "Node name: $($script:Config['NODE_NAME'])"
 
   New-WormholeKeys
@@ -714,6 +755,7 @@ function Invoke-Config([string[]]$ConfigArgs) {
       if ($ConfigArgs.Count -lt 3) { Fail "Usage: $($script:ScriptName) config set KEY VALUE" }
       $key = $ConfigArgs[1]; $value = $ConfigArgs[2]
       if ($script:EditableKeys -notcontains $key) { Fail "Key not editable via 'set': $key. Editable: $($script:EditableKeys -join ' ')" }
+      if (-not (Test-ConfigValue $key $value)) { Fail "Invalid $key. NODE_NAME: 3-32 lowercase letters, digits, hyphens. CPU_WORKERS, GPU_DEVICES: 0-256. MINER_LISTEN_PORT: 1024-65535." }
       Read-Config | Out-Null
       $script:Config[$key] = $value
       Write-Config
@@ -775,10 +817,15 @@ function Invoke-Status {
   $syncState = 'Unknown'; $syncDetail = ''
   $health = Invoke-NodeRpc 'system_health'
   if ($null -ne $health) {
-    $syncState = if ($health.isSyncing) { 'Syncing' } else { 'Synced' }
     $peers = [int]$health.peers
     $s1 = Invoke-NodeRpc 'system_syncState'
-    if ($null -ne $s1 -and $health.isSyncing) {
+    # isSyncing flips to false for a moment between import batches, so it is
+    # only believed when the block height agrees: Synced means within two
+    # blocks of the best height peers report.
+    $behind = ($null -ne $s1) -and ([long]$s1.highestBlock -gt 0) -and ([long]$s1.currentBlock -lt ([long]$s1.highestBlock - 2))
+    $isSyncing = [bool]$health.isSyncing -or $behind
+    $syncState = if ($isSyncing) { 'Syncing' } else { 'Synced' }
+    if ($null -ne $s1 -and $isSyncing) {
       $cur1 = [long]$s1.currentBlock; $high = [long]$s1.highestBlock
       Start-Sleep 5
       $s2 = Invoke-NodeRpc 'system_syncState'
@@ -793,8 +840,8 @@ function Invoke-Status {
       } else {
         $syncDetail = ('block {0:N0} of {1:N0}, no peers yet' -f $cur2, $high)
       }
-    } elseif (-not $health.isSyncing) {
-      $syncDetail = "$peers peers"
+    } elseif (-not $isSyncing) {
+      $syncDetail = if ($null -ne $s1) { 'block {0:N0}, {1} peers' -f [long]$s1.currentBlock, $peers } else { "$peers peers" }
     }
   }
 

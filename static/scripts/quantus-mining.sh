@@ -890,6 +890,71 @@ mask_hash() {
   fi
 }
 
+# mining.conf is read back with `source`, so every value written into it must
+# be inert. The node name is also public on the telemetry dashboard.
+valid_node_name() {
+  case "$1" in
+    ''|*[!a-z0-9-]*|-*|*-) return 1 ;;
+  esac
+  [ "${#1}" -ge 3 ] && [ "${#1}" -le 32 ]
+}
+
+valid_config_value() {
+  local key="$1" value="$2"
+  case "$key" in
+    NODE_NAME) valid_node_name "$value" ;;
+    CPU_WORKERS|GPU_DEVICES)
+      case "$value" in ''|*[!0-9]*) return 1 ;; esac
+      [ "$value" -le 256 ]
+      ;;
+    MINER_LISTEN_PORT)
+      case "$value" in ''|*[!0-9]*) return 1 ;; esac
+      [ "$value" -ge 1024 ] && [ "$value" -le 65535 ]
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+default_node_name() {
+  local host
+  host="$(hostname 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-' | sed 's/^-*//; s/-*$//' | cut -c1-24)"
+  if [ -n "$host" ] && valid_node_name "quantus-${host}"; then
+    printf 'quantus-%s' "$host"
+  else
+    printf 'quantus-miner'
+  fi
+}
+
+# Asks for the public telemetry name. QUANTUS_NODE_NAME answers it without a
+# prompt, and when stdin is not a terminal (an agent, CI) the default is used
+# instead of blocking on input nobody can give.
+choose_node_name() {
+  local default answer
+  default="$(default_node_name)"
+  if [ -n "${QUANTUS_NODE_NAME:-}" ]; then
+    valid_node_name "$QUANTUS_NODE_NAME" \
+      || die "QUANTUS_NODE_NAME must be 3-32 lowercase letters, digits and hyphens."
+    NODE_NAME="$QUANTUS_NODE_NAME"
+    return
+  fi
+  if [ ! -t 0 ]; then
+    NODE_NAME="$default"
+    return
+  fi
+  echo ""
+  info "Your miner's name is shown publicly on https://telemetry.quantus.cat/."
+  info "Use lowercase letters, numbers and hyphens. Avoid your real name."
+  while true; do
+    read -r -p "Miner name [${default}]: " answer
+    answer="$(printf '%s' "${answer:-$default}" | tr '[:upper:]' '[:lower:]')"
+    if valid_node_name "$answer"; then
+      NODE_NAME="$answer"
+      return
+    fi
+    warn "Use 3-32 lowercase letters, numbers and hyphens, not starting or ending with a hyphen."
+  done
+}
+
 validate_editable_key() {
   local key="$1"
   case " ${EDITABLE_KEYS} " in
@@ -1003,8 +1068,7 @@ cmd_setup() {
     return 0
   fi
 
-  NODE_NAME="quantus-$(hostname 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-' | cut -c1-24)"
-  [ "$NODE_NAME" != "quantus-" ] || NODE_NAME="quantus-miner"
+  choose_node_name
   info "Node name: ${NODE_NAME}"
 
   generate_wormhole_keys
@@ -1035,6 +1099,8 @@ cmd_config() {
       local key="${1:-}" value="${2:-}"
       [ -n "$key" ] && [ -n "$value" ] || die "Usage: ${SCRIPT_NAME} config set KEY VALUE"
       validate_editable_key "$key" || die "Key not editable via 'set': ${key}. Editable: ${EDITABLE_KEYS}"
+      valid_config_value "$key" "$value" \
+        || die "Invalid ${key}. NODE_NAME: 3-32 lowercase letters, digits, hyphens. CPU_WORKERS, GPU_DEVICES: 0-256. MINER_LISTEN_PORT: 1024-65535."
       [ -f "$CONFIG_FILE" ] || die "Config not found. Run: ${SCRIPT_NAME} setup"
 
       load_config
@@ -1303,6 +1369,21 @@ cmd_status() {
       *'"isSyncing":false'*) sync_state="Synced" ;;
       *'"isSyncing":true'*) sync_state="Syncing" ;;
     esac
+    # isSyncing flips to false for a moment between import batches, so it is
+    # only believed when the block height agrees: Synced means within two
+    # blocks of the best height peers report.
+    if sync_json="$(curl --max-time 2 -fsS -H 'Content-Type: application/json' \
+      -d '{"jsonrpc":"2.0","id":1,"method":"system_syncState","params":[]}' \
+      http://127.0.0.1:9944 2>/dev/null)"; then
+      current_block="$(printf '%s' "$sync_json" | sed -n 's/.*"currentBlock":\([0-9]*\).*/\1/p')"
+      highest_block="$(printf '%s' "$sync_json" | sed -n 's/.*"highestBlock":\([0-9]*\).*/\1/p')"
+      if [ -n "$current_block" ] && [ -n "$highest_block" ]; then
+        if [ "$current_block" -lt $((highest_block - 2)) ]; then
+          sync_state="Syncing"
+        fi
+        sync_state="${sync_state}, block ${current_block} of ${highest_block}"
+      fi
+    fi
   fi
 
   if [ -f "${LOG_DIR}/miner.log" ]; then
@@ -1312,7 +1393,7 @@ cmd_status() {
   fi
 
   if [ "$node_state" = "Running" ] && [ "$miner_state" = "Running" ] \
-    && [ "$sync_state" = "Synced" ] && [ -n "$latest_rate" ]; then
+    && case "$sync_state" in Synced*) true ;; *) false ;; esac && [ -n "$latest_rate" ]; then
     overall="MINING"
   elif [ "$node_state" = "Stopped" ] || [ "$miner_state" = "Stopped" ]; then
     overall="STOPPED"

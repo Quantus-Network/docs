@@ -371,3 +371,44 @@ describe('mainnet repin', () => {
     expect(ps1).not.toMatch(/'CHAIN', 'planck'/);
   });
 });
+
+describe('node name and sync truth', () => {
+  test('shell refuses config values that would run code when the config is sourced', () => {
+    const probe = (key: string, value: string) =>
+      runBash(`source '${shellScriptPath}'; valid_config_value '${key}' '${value}' && echo ok || echo no`).stdout.trim();
+    expect(probe('NODE_NAME', 'lee-quan-yew')).toBe('ok');
+    expect(probe('NODE_NAME', '$(touch pwned)')).toBe('no');
+    expect(probe('NODE_NAME', 'Has Space')).toBe('no');
+    expect(probe('NODE_NAME', '-leading')).toBe('no');
+    expect(probe('NODE_NAME', 'ab')).toBe('no');
+    expect(probe('CPU_WORKERS', '4')).toBe('ok');
+    expect(probe('CPU_WORKERS', '1; id')).toBe('no');
+    expect(probe('MINER_LISTEN_PORT', '9833')).toBe('ok');
+    expect(probe('MINER_LISTEN_PORT', '80')).toBe('no');
+  });
+
+  test('shell takes the default name without blocking when there is no terminal', () => {
+    const r = runBash(`source '${shellScriptPath}'; hostname() { echo 'My_Laptop!'; }; choose_node_name </dev/null; printf '%s' "$NODE_NAME"`);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toBe('quantus-mylaptop');
+    const env = runBash(`source '${shellScriptPath}'; QUANTUS_NODE_NAME=lee-quan-yew choose_node_name </dev/null; printf '%s' "$NODE_NAME"`);
+    expect(env.stdout).toBe('lee-quan-yew');
+  });
+
+  test('both installers ask for the public name and check block height before saying Synced', () => {
+    expect(script).toContain('choose_node_name');
+    expect(script).toContain('system_syncState');
+    expect(ps1).toContain('Select-NodeName');
+    expect(ps1).toMatch(/\$behind = /);
+    expect(guide).toContain('shown publicly');
+  });
+
+  test.skipIf(!powershell)('PowerShell validates names and values the same way', () => {
+    const load = `. '${ps1Path.replaceAll('\\', '\\\\')}'; `;
+    const r = runPowerShell(
+      load + `@((Test-NodeName 'lee-quan-yew'), (Test-NodeName 'Bad Name'), (Test-NodeName '-x-'), (Test-ConfigValue 'CPU_WORKERS' '1; id'), (Test-ConfigValue 'MINER_LISTEN_PORT' '9833')) -join ','`,
+    );
+    expect(r.stdout.trim()).toBe('True,False,False,False,True');
+  });
+});
+
