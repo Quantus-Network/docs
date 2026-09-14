@@ -37,6 +37,16 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
+# Started from a PowerShell 7 window, Windows PowerShell inherits that window's
+# module paths, then cannot load its own built-in modules (Get-FileHash,
+# Expand-Archive, the CIM commands) and setup dies mid-download. Keep only the
+# paths that belong to this edition.
+if ($PSVersionTable.PSEdition -eq 'Desktop' -and $env:PSModulePath) {
+  $own = @("$PSHOME\Modules", (Join-Path $env:ProgramFiles 'WindowsPowerShell\Modules'))
+  $kept = @($env:PSModulePath -split ';' | Where-Object { $_ -and $_ -notlike '*\Program Files\PowerShell\*' -and $_ -notlike '*microsoft.powershell_*' -and $_ -notlike '*\Documents\PowerShell\*' })
+  $env:PSModulePath = (@($kept) + ($own | Where-Object { $kept -notcontains $_ })) -join ';'
+}
+
 # ---------------------------------------------------------------------------
 # Paths and constants
 # ---------------------------------------------------------------------------
@@ -102,6 +112,16 @@ $script:MinerProtocol = ''
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+# Native programs write progress and results to stderr. Under Stop, Windows
+# PowerShell turns any redirected stderr line into a terminating error, which
+# only shows up when this script's own output is captured (the desktop app, an
+# agent). Native calls run under Continue and are judged by their exit code.
+function Invoke-Native([scriptblock]$Block) {
+  $saved = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try { & $Block } finally { $ErrorActionPreference = $saved }
+}
 
 function Fail([string]$Message) {
   [Console]::Error.WriteLine("Error: $Message")
@@ -267,9 +287,9 @@ function Get-MinerProtocol([string]$NodeHelp, [string]$MinerHelp) {
 function Test-InstalledPair {
   if (-not (Test-Path $script:NodeBin)) { Fail "quantus-node not found at $($script:NodeBin)" }
   if (-not (Test-Path $script:MinerBin)) { Fail "quantus-miner not found at $($script:MinerBin)" }
-  $nodeHelp = (& $script:NodeBin --help 2>&1 | Out-String)
+  $nodeHelp = Invoke-Native { & $script:NodeBin --help 2>&1 | Out-String }
   if ($LASTEXITCODE -ne 0) { Fail "Failed to probe quantus-node --help (exit $LASTEXITCODE)." }
-  $minerHelp = (& $script:MinerBin serve --help 2>&1 | Out-String)
+  $minerHelp = Invoke-Native { & $script:MinerBin serve --help 2>&1 | Out-String }
   if ($LASTEXITCODE -ne 0) { Fail "Failed to probe quantus-miner serve --help (exit $LASTEXITCODE)." }
   $script:MinerProtocol = Get-MinerProtocol $nodeHelp $minerHelp
   Info "Miner protocol: $($script:MinerProtocol)"
@@ -335,17 +355,24 @@ function New-WormholeKeys {
   Info 'Wallet step: enter your existing Quantus 24-word recovery phrase locally.'
   Info 'Input is hidden and is not written to disk, logs, command arguments, or network requests.'
   Info 'Never paste a recovery phrase into chat or a support ticket.'
-  $secure = Read-Host -Prompt 'Recovery phrase' -AsSecureString
-  $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-  try {
-    $phrase = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
-  } finally {
-    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+  if ([Console]::IsInputRedirected) {
+    # The desktop launcher collects the phrase in a masked box and hands it over
+    # on standard input, the same channel the node reads it from below. It never
+    # appears in arguments, environment variables, files or logs.
+    $phrase = [Console]::In.ReadLine()
+  } else {
+    $secure = Read-Host -Prompt 'Recovery phrase' -AsSecureString
+    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+    try {
+      $phrase = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+    } finally {
+      [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+    }
   }
   if ([string]::IsNullOrWhiteSpace($phrase)) { Fail 'Recovery phrase cannot be empty. Open your Quantus wallet backup and retry.' }
 
   # The phrase goes to the node on stdin only, never as an argument.
-  $output = ($phrase | & $script:NodeBin key quantus --scheme wormhole --words 2>&1 | Out-String)
+  $output = Invoke-Native { $phrase | & $script:NodeBin key quantus --scheme wormhole --words 2>&1 | Out-String }
   $phrase = $null
   $keys = Read-WormholeOutput $output
   $output = $null
@@ -820,7 +847,7 @@ function Invoke-Setup {
 
   if (-not (Test-Path $script:NodeKeyPath)) {
     Info 'Generating node P2P identity...'
-    & $script:NodeBin key generate-node-key --file $script:NodeKeyPath 2>&1 | Out-Null
+    Invoke-Native { & $script:NodeBin key generate-node-key --file $script:NodeKeyPath 2>&1 | Out-Null }
   } else {
     Info "Using existing node key at $($script:NodeKeyPath)"
   }

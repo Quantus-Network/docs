@@ -466,3 +466,35 @@ describe('plain hash rate, remembered location, autostart', () => {
   });
 });
 
+describe('desktop launcher', () => {
+  const app = readFileSync(resolve(root, 'static/scripts/quantus-mining-app.ps1'), 'utf8');
+  const cmd = readFileSync(resolve(root, 'static/scripts/Start Quantus Mining.cmd'), 'utf8');
+
+  test('double-click file opens the window hidden, with no console', () => {
+    expect(cmd).toContain('-WindowStyle Hidden');
+    expect(cmd).toContain('%~dp0quantus-mining-app.ps1');
+    expect(cmd).toContain('\r\n');
+  });
+
+  test('hands the phrase over on standard input only', () => {
+    expect(app).toContain('RedirectStandardInput = $true');
+    expect(app).toContain('StandardInput.WriteLine($phrase)');
+    expect(app).not.toMatch(/EnvironmentVariables\[[^\]]*PHRASE/i);
+    expect(app).not.toMatch(/Arguments[^\n]*\$phrase/);
+    expect(app).toContain('UseSystemPasswordChar = $true');
+    expect(ps1).toContain('[Console]::IsInputRedirected');
+  });
+
+  test('installer survives being launched from PowerShell 7 and captured', () => {
+    expect(ps1).toContain("PSEdition -eq 'Desktop'");
+    expect(ps1).toContain('function Invoke-Native');
+    expect(ps1).not.toMatch(/\n\s*&\s*\$script:(NodeBin|MinerBin)[^\n]*2>&1/);
+  });
+
+  test.skipIf(!powershell)('launcher parses', () => {
+    const p = resolve(root, 'static/scripts/quantus-mining-app.ps1').replaceAll('\\', '\\\\');
+    const r = runPowerShell(`$t=$null;$e=$null;[System.Management.Automation.Language.Parser]::ParseFile('${p}',[ref]$t,[ref]$e)|Out-Null;$e.Count`);
+    expect(r.stdout.trim()).toBe('0');
+  });
+});
+
