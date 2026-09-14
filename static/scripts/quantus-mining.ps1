@@ -73,6 +73,13 @@ $script:MinerPidFile = Join-Path $script:MiningDir 'miner.pid'
 $script:NodeKeyPath = Join-Path $script:MiningDir 'node_key.p2p'
 $script:InnerHashFile = Join-Path $script:MiningDir 'rewards-inner-hash'
 $script:CompatibilityFile = Join-Path $script:MiningDir 'mining-compatibility.json'
+
+# Every hint prints a command that can be pasted as-is. PowerShell will not run a
+# script by bare name, so "quantus-mining.ps1 stop" fails; the full invocation
+# of the installed copy (or this file, before setup) does not.
+$script:RunTarget = Join-Path $script:MiningDir $script:ScriptName
+if (-not (Test-Path $script:RunTarget) -and $PSCommandPath) { $script:RunTarget = $PSCommandPath }
+$script:RunHint = "powershell -ExecutionPolicy Bypass -File `"$($script:RunTarget)`""
 $script:CompatibilityUrl = if ($env:QUANTUS_COMPATIBILITY_URL) { $env:QUANTUS_COMPATIBILITY_URL } else { 'https://docs.quantus.com/mining-compatibility.json' }
 
 $script:ChainRepo = 'Quantus-Network/chain'
@@ -188,7 +195,7 @@ function Read-ManifestString([hashtable]$Manifest, [string]$Key) {
 
 function Import-CompatibilityManifest([string]$Path) {
   if (-not (Test-Path $Path) -or (Get-Item $Path).Length -eq 0) {
-    Fail "Compatibility manifest not found at $Path. Run: $script:ScriptName setup -Force"
+    Fail "Compatibility manifest not found at $Path. Run: $($script:RunHint) setup -Force"
   }
   $raw = Get-Content $Path -Raw
   try { $json = $raw | ConvertFrom-Json } catch { Fail 'Compatibility manifest is not valid JSON. No files were installed.' }
@@ -398,7 +405,7 @@ function Write-Config {
 }
 
 function Read-Config {
-  if (-not (Test-Path $script:ConfigFile)) { Fail "Config not found at $($script:ConfigFile). Run: $($script:ScriptName) setup" }
+  if (-not (Test-Path $script:ConfigFile)) { Fail "Config not found at $($script:ConfigFile). Run: $($script:RunHint) setup" }
   $c = @{}
   foreach ($line in Get-Content $script:ConfigFile) {
     if ($line -match '^\s*#' -or $line -notmatch '=') { continue }
@@ -407,10 +414,10 @@ function Read-Config {
   }
   if (-not $c.ContainsKey('NODE_NAME')) { Fail 'NODE_NAME missing in config' }
   if (-not (Test-Path $script:InnerHashFile) -or (Get-Item $script:InnerHashFile).Length -eq 0) {
-    Fail "Reward preimage file is missing. Re-run $($script:ScriptName) setup -Force and enter the phrase locally."
+    Fail "Reward preimage file is missing. Re-run $($script:RunHint) setup -Force and enter the phrase locally."
   }
   $c['_innerHash'] = (Get-Content $script:InnerHashFile -Raw).Trim()
-  if (-not $c['_innerHash']) { Fail "Reward preimage file is empty. Re-run $($script:ScriptName) setup -Force." }
+  if (-not $c['_innerHash']) { Fail "Reward preimage file is empty. Re-run $($script:RunHint) setup -Force." }
   foreach ($pair in @(@('CHAIN', 'mainnet'), @('MINER_LISTEN_PORT', '9833'), @('CPU_WORKERS', '0'), @('GPU_DEVICES', '0'), @('NODE_KEY_FILE', 'node_key.p2p'))) {
     if (-not $c.ContainsKey($pair[0])) { $c[$pair[0]] = $pair[1] }
   }
@@ -584,10 +591,10 @@ function Confirm-StartPrerequisites {
   if ($c['NODE_VERSION'] -ne $m['_nodeVersion'] -or $c['MINER_VERSION'] -ne $m['_minerVersion'] -or $c['CHAIN'] -ne $m['_chain']) {
     Fail ("Installed mining files do not match the supported manifest.`nInstalled: node {0} + miner {1} on {2}`nRequired:  node {3} + miner {4} on {5}`nRun: {6} setup -Force" -f $c['NODE_VERSION'], $c['MINER_VERSION'], $c['CHAIN'], $m['_nodeVersion'], $m['_minerVersion'], $m['_chain'], $script:ScriptName)
   }
-  if (-not (Test-Path $script:NodeBin)) { Fail "quantus-node not found at $($script:NodeBin). Run: $($script:ScriptName) setup" }
-  if (-not (Test-Path $script:MinerBin)) { Fail "quantus-miner not found at $($script:MinerBin). Run: $($script:ScriptName) setup" }
+  if (-not (Test-Path $script:NodeBin)) { Fail "quantus-node not found at $($script:NodeBin). Run: $($script:RunHint) setup" }
+  if (-not (Test-Path $script:MinerBin)) { Fail "quantus-miner not found at $($script:MinerBin). Run: $($script:RunHint) setup" }
   $key = Join-Path $script:MiningDir $c['NODE_KEY_FILE']
-  if (-not (Test-Path $key)) { Fail "Node key not found at $key. Run: $($script:ScriptName) setup" }
+  if (-not (Test-Path $key)) { Fail "Node key not found at $key. Run: $($script:RunHint) setup" }
   Test-InstalledPair
 }
 
@@ -670,12 +677,12 @@ function Invoke-Autostart([string[]]$AutostartArgs) {
   $sub = if ($AutostartArgs.Count -gt 0) { $AutostartArgs[0] } else { 'status' }
   switch ($sub) {
     'on' {
-      if (-not (Test-Path $script:ConfigFile)) { Fail "Mining is not configured. Run: $($script:ScriptName) mine" }
+      if (-not (Test-Path $script:ConfigFile)) { Fail "Mining is not configured. Run: $($script:RunHint) mine" }
       Copy-InstalledScript
       if (-not (Test-Path $script:AutostartKey)) { New-Item -Path $script:AutostartKey -Force | Out-Null }
       Set-ItemProperty -Path $script:AutostartKey -Name $script:AutostartName -Value (Get-AutostartCommand)
       Info 'Autostart: on. Mining will start about 20 seconds after you sign in to Windows.'
-      Info "Turn it off with: $($script:ScriptName) autostart off"
+      Info "Turn it off with: $($script:RunHint) autostart off"
     }
     'off' {
       if (Get-AutostartValue) { Remove-ItemProperty -Path $script:AutostartKey -Name $script:AutostartName }
@@ -683,9 +690,9 @@ function Invoke-Autostart([string[]]$AutostartArgs) {
     }
     'status' {
       $v = Get-AutostartValue
-      if ($v) { Info 'Autostart: on' } else { Info "Autostart: off (turn on with: $($script:ScriptName) autostart on)" }
+      if ($v) { Info 'Autostart: on' } else { Info "Autostart: off (turn on with: $($script:RunHint) autostart on)" }
     }
-    default { Fail "Usage: $($script:ScriptName) autostart on|off|status" }
+    default { Fail "Usage: $($script:RunHint) autostart on|off|status" }
   }
 }
 
@@ -830,7 +837,7 @@ function Invoke-Setup {
     Copy-InstalledScript
     Write-Output ''
     Info "Binaries refreshed to node $($script:Manifest['_nodeVersion']) + miner $($script:Manifest['_minerVersion']) on $($script:Manifest['_chain']). Reward identity unchanged."
-    Info "Start mining with: $($script:ScriptName) mine"
+    Info "Start mining with: $($script:RunHint) mine"
     return
   }
 
@@ -855,7 +862,7 @@ function Invoke-Setup {
 
   Write-Output ''
   Info 'Setup complete.'
-  Info "Start mining with: $($script:ScriptName) mine"
+  Info "Start mining with: $($script:RunHint) mine"
   Info 'Telemetry dashboard: https://telemetry.quantus.cat/'
   Info 'If sync stalls, check free disk space and run status again to compare block progress.'
 }
@@ -866,11 +873,11 @@ function Invoke-Config([string[]]$ConfigArgs) {
   $sub = if ($ConfigArgs.Count -gt 0) { $ConfigArgs[0] } else { '' }
   switch ($sub) {
     'show' {
-      if (-not (Test-Path $script:ConfigFile)) { Fail "Config not found. Run: $($script:ScriptName) setup" }
+      if (-not (Test-Path $script:ConfigFile)) { Fail "Config not found. Run: $($script:RunHint) setup" }
       Get-Content $script:ConfigFile | Write-Output
     }
     'set' {
-      if ($ConfigArgs.Count -lt 3) { Fail "Usage: $($script:ScriptName) config set KEY VALUE" }
+      if ($ConfigArgs.Count -lt 3) { Fail "Usage: $($script:RunHint) config set KEY VALUE" }
       $key = $ConfigArgs[1]; $value = $ConfigArgs[2]
       if ($script:EditableKeys -notcontains $key) { Fail "Key not editable via 'set': $key. Editable: $($script:EditableKeys -join ' ')" }
       if (-not (Test-ConfigValue $key $value)) { Fail "Invalid $key. NODE_NAME: 3-32 lowercase letters, digits, hyphens. CPU_WORKERS, GPU_DEVICES: 0-256. MINER_LISTEN_PORT: 1024-65535." }
@@ -879,14 +886,14 @@ function Invoke-Config([string[]]$ConfigArgs) {
       Write-Config
       Info "Updated $key=$value"
     }
-    default { Fail "Usage: $($script:ScriptName) config show|set KEY VALUE" }
+    default { Fail "Usage: $($script:RunHint) config show|set KEY VALUE" }
   }
 }
 
 function Invoke-Start {
   Confirm-StartPrerequisites
   if (Test-StackRunning) {
-    Fail "Mining stack already running. Run: $($script:ScriptName) stop"
+    Fail "Mining stack already running. Run: $($script:RunHint) stop"
   }
   $nodeLog = Join-Path $script:LogDir 'node.log'
   $minerLog = Join-Path $script:LogDir 'miner.log'
@@ -912,9 +919,9 @@ function Invoke-Start {
 
   Write-Output ''
   Info 'Mining stack running in background.'
-  Info "Wait for full sync before expecting blocks (check $nodeLog or run: $($script:ScriptName) status)."
+  Info "Wait for full sync before expecting blocks (check $nodeLog or run: $($script:RunHint) status)."
   Info "Telemetry: https://telemetry.quantus.cat/ (search for '$($script:Config['NODE_NAME'])')"
-  Info "Stop with: $($script:ScriptName) stop"
+  Info "Stop with: $($script:RunHint) stop"
 }
 
 function Invoke-Stop {
@@ -927,7 +934,7 @@ function Invoke-Stop {
 }
 
 function Invoke-Status {
-  if (-not (Test-Path $script:ConfigFile)) { Fail "Mining is not configured. Run: $($script:ScriptName) mine" }
+  if (-not (Test-Path $script:ConfigFile)) { Fail "Mining is not configured. Run: $($script:RunHint) mine" }
   $c = Read-Config
   $nodeState = if (Test-ProcessAlive (Read-PidFile $script:NodePidFile) 'quantus-node') { 'Running' } else { 'Stopped' }
   $minerState = if (Test-ProcessAlive (Read-PidFile $script:MinerPidFile) 'quantus-miner') { 'Running' } else { 'Stopped' }
@@ -984,19 +991,19 @@ Hash rate:        $hashRate
 Reward address:   $($c['WORMHOLE_ADDRESS'])
 Node name:        $($c['NODE_NAME'])
 Telemetry:        https://telemetry.quantus.cat/ (search for $($c['NODE_NAME']))
-Restart recovery: Run $($script:ScriptName) restart-check
+Restart recovery: Run $($script:RunHint) restart-check
 "@ | Write-Output
 
   switch ($overall) {
     'MINING' { Info 'Success: the node is synced and the miner is reporting hash rate.' }
-    'STOPPED' { Info "Recovery: run $($script:ScriptName) mine to start the verified pair." }
+    'STOPPED' { Info "Recovery: run $($script:RunHint) mine to start the verified pair." }
     default {
       if ($syncState -eq 'Stalled') {
         Info 'Recovery: check free disk space, peer connectivity and disk activity. The cause is not yet diagnosed.'
         Info 'Do not disable antivirus protection or add exclusions as a default fix.'
-        Info "Compare progress with: $($script:ScriptName) status"
+        Info "Compare progress with: $($script:RunHint) status"
       } else {
-        Info "Recovery: wait for sync, then run $($script:ScriptName) status again."
+        Info "Recovery: wait for sync, then run $($script:RunHint) status again."
       }
     }
   }
@@ -1010,7 +1017,7 @@ function Invoke-Mine {
 }
 
 function Invoke-RestartCheck {
-  if (-not (Test-Path $script:ConfigFile)) { Fail "Mining is not configured. Run: $($script:ScriptName) mine" }
+  if (-not (Test-Path $script:ConfigFile)) { Fail "Mining is not configured. Run: $($script:RunHint) mine" }
   Invoke-Stop
   Invoke-Start
   if ((Test-ProcessAlive (Read-PidFile $script:NodePidFile) 'quantus-node') -and (Test-ProcessAlive (Read-PidFile $script:MinerPidFile) 'quantus-miner')) {
@@ -1018,7 +1025,7 @@ function Invoke-RestartCheck {
     Invoke-Status
     return
   }
-  Fail "Restart recovery failed. Run $($script:ScriptName) status, then apply the single recovery action shown."
+  Fail "Restart recovery failed. Run $($script:RunHint) status, then apply the single recovery action shown."
 }
 
 function Invoke-Uninstall {
@@ -1069,6 +1076,6 @@ if ($MyInvocation.InvocationName -ne '.') {
     'uninstall' { Invoke-Uninstall }
     'autostart' { Invoke-Autostart $Rest }
     { $_ -in 'help', '-h', '--help' } { Invoke-Help }
-    default { Fail "Unknown command: $Command. Run: $($script:ScriptName) help" }
+    default { Fail "Unknown command: $Command. Run: $($script:RunHint) help" }
   }
 }
