@@ -412,3 +412,57 @@ describe('node name and sync truth', () => {
   });
 });
 
+describe('plain hash rate, remembered location, autostart', () => {
+  test('shell averages recent searches into one plain rate and flags a stale miner', () => {
+    const iso = (msAgo: number) => new Date(Date.now() - msAgo).toISOString().replace(/\.\d+Z$/, 'Z');
+    const line = (ts: string, hashes: number, secs: number) =>
+      `[${ts} INFO  miner_service] GPU worker 0 interrupted by new block: ${hashes} hashes in ${secs}s (x MH/s)`;
+    // 300M in 10s and 60M in 2s: 360M / 12s = 30.0 MH/s, not the 30/30 of either line alone.
+    const recent = [line(iso(60_000), 300000000, 10), line(iso(30_000), 60000000, 2)].join('\n');
+    const fresh = runBash(`source '${shellScriptPath}'; f=$(mktemp); printf '%s\n' '${recent.replaceAll("'", "")}' > "$f"; hash_rate_summary "$f"; printf '%s|%s' "$HASH_RATE_TEXT" "$HASH_RATE_FRESH"`);
+    expect(fresh.stdout).toBe('30.0 MH/s|true');
+    const old = line(iso(20 * 60_000), 300000000, 10);
+    const stale = runBash(`source '${shellScriptPath}'; f=$(mktemp); printf '%s\n' '${old}' > "$f"; hash_rate_summary "$f"; printf '%s|%s' "$HASH_RATE_TEXT" "$HASH_RATE_FRESH"`);
+    expect(stale.stdout).toBe('no hashes in the last 3 min, miner is not working now|false');
+  });
+
+  test('shell remembers the install location and ignores unsafe entries', () => {
+    const r = runBash(
+      `d=$(mktemp -d); export XDG_CONFIG_HOME="$d/cfg"; mkdir -p "$d/cfg/quantus-mining" "$d/mine"; ` +
+      `printf 'MINING_DIR=%s\nNODE_DATA_PATH=/data/$(id)\n' "$d/mine" > "$d/cfg/quantus-mining/location"; ` +
+      `unset QUANTUS_MINING_DIR QUANTUS_NODE_DATA_PATH; source '${shellScriptPath}'; printf '%s|%s' "$MINING_DIR" "\${QUANTUS_NODE_DATA_PATH:-unset}" | sed "s#$d#D#g"`,
+    );
+    expect(r.status).toBe(0);
+    expect(r.stdout).toBe('D/mine|unset');
+  });
+
+  test.skipIf(!powershell)('PowerShell averages recent searches and flags a stale miner', () => {
+    const load = `. '${ps1Path.replaceAll('\\', '\\\\')}'; `;
+    const r = runPowerShell(
+      load +
+      `$f=[IO.Path]::GetTempFileName(); $u=(Get-Date).ToUniversalTime(); ` +
+      `function L($ago,$h,$s){ '[' + $u.AddSeconds(-$ago).ToString('yyyy-MM-ddTHH:mm:ss') + 'Z INFO  miner_service] GPU worker 0 interrupted by new block: ' + $h + ' hashes in ' + $s + 's (x MH/s)' } ` +
+      `Set-Content $f @((L 60 300000000 10), (L 30 60000000 2)); $a = Get-HashRateSummary $f; ` +
+      `Set-Content $f (L 1200 300000000 10); $b = Get-HashRateSummary $f; ` +
+      `"$($a.Text)|$($a.Fresh)|$($b.Fresh)|$($b.Text -like '*not working now')"`,
+    );
+    expect(r.stdout.trim()).toBe('30.0 MH/s|True|False|True');
+  });
+
+  test.skipIf(!powershell)('PowerShell autostart writes and removes one per-user entry', () => {
+    const key = 'HKCU:\\Software\\QuantusMiningTest' + Date.now();
+    const load = `$env:QUANTUS_AUTOSTART_KEY='${key}'; $env:QUANTUS_MINING_DIR=[IO.Path]::Combine([IO.Path]::GetTempPath(), 'qm-autostart-' + [guid]::NewGuid()); New-Item -ItemType Directory -Force (Join-Path $env:QUANTUS_MINING_DIR 'logs') | Out-Null; Set-Content (Join-Path $env:QUANTUS_MINING_DIR 'mining.conf') 'NODE_NAME=x'; . '${ps1Path.replaceAll('\\', '\\\\')}'; `;
+    const r = runPowerShell(
+      load +
+      `Invoke-Autostart @('on') | Out-Null; $v = Get-AutostartValue; Invoke-Autostart @('off') | Out-Null; $gone = -not (Get-AutostartValue); Remove-Item -LiteralPath '${key}' -Recurse -Force -ErrorAction SilentlyContinue; ` +
+      `"$($v -like '*-WindowStyle Hidden*')|$($v -like '*quantus-mining.ps1*start*')|$gone"`,
+    );
+    expect(r.stdout.trim()).toBe('True|True|True');
+  });
+
+  test('guide documents autostart and not needing to repeat the install path', () => {
+    expect(ps1).toContain("'autostart' { Invoke-Autostart");
+    expect(guide).toContain('autostart');
+  });
+});
+

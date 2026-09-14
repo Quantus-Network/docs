@@ -23,6 +23,23 @@
 set -euo pipefail
 
 readonly SCRIPT_NAME="$(basename "$0")"
+
+# Where the last setup installed to, so later commands find it without the
+# user re-exporting QUANTUS_MINING_DIR / QUANTUS_NODE_DATA_PATH. Environment
+# variables still win. Parsed line by line, never sourced.
+readonly LOCATION_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/quantus-mining/location"
+if [ -z "${QUANTUS_MINING_DIR:-}" ] && [ -f "$LOCATION_FILE" ]; then
+  while IFS='=' read -r location_key location_value; do
+    case "$location_value" in /*) ;; *) continue ;; esac
+    case "$location_value" in *[\'\"\$\`]*) continue ;; esac
+    case "$location_key" in
+      MINING_DIR) QUANTUS_MINING_DIR="$location_value" ;;
+      NODE_DATA_PATH) [ -n "${QUANTUS_NODE_DATA_PATH:-}" ] || QUANTUS_NODE_DATA_PATH="$location_value" ;;
+    esac
+  done < "$LOCATION_FILE"
+  export QUANTUS_MINING_DIR
+  [ -z "${QUANTUS_NODE_DATA_PATH:-}" ] || export QUANTUS_NODE_DATA_PATH
+fi
 readonly DEFAULT_MINING_DIR="${HOME}/quantus-mining"
 readonly MINING_DIR="${QUANTUS_MINING_DIR:-$DEFAULT_MINING_DIR}"
 readonly CONFIG_FILE="${MINING_DIR}/mining.conf"
@@ -892,6 +909,50 @@ mask_hash() {
 
 # mining.conf is read back with `source`, so every value written into it must
 # be inert. The node name is also public on the telemetry dashboard.
+save_install_location() {
+  mkdir -p "$(dirname "$LOCATION_FILE")"
+  printf 'MINING_DIR=%s\nNODE_DATA_PATH=%s\n' "$(cd "$MINING_DIR" && pwd)" "$(node_data_path)" > "$LOCATION_FILE"
+}
+
+# Turns the miner's log into one plain number. Each GPU worker logs every search
+# as "GPU worker N ...: H hashes in T s". A single search can be two seconds
+# long when a new block cuts it short, so one line swings widely. The rate shown
+# is total hashes over total seconds per worker in the last three minutes,
+# summed across workers. Nothing in that window means the miner is not working
+# now, even if its process is still alive.
+hash_rate_summary() {
+  local log="$1" cutoff
+  HASH_RATE_TEXT="Waiting for miner output"
+  HASH_RATE_FRESH="false"
+  [ -f "$log" ] || return 0
+  cutoff="$(date -u -d '-3 minutes' +%Y-%m-%dT%H:%M:%S 2>/dev/null || date -u -v-3M +%Y-%m-%dT%H:%M:%S)"
+  HASH_RATE_TEXT="$(tail -n 2000 "$log" | awk -v cutoff="$cutoff" '
+    match($0, /^\[[0-9-]+T[0-9:]+Z/) {
+      ts = substr($0, 2, 19)
+      if (!match($0, /GPU worker [0-9]+/)) next
+      split(substr($0, RSTART, RLENGTH), wparts, " "); w = wparts[3]
+      if (!match($0, /[0-9]+ hashes in [0-9.]+s/)) next
+      split(substr($0, RSTART, RLENGTH), hparts, " ")
+      last = ts
+      if (ts < cutoff) next
+      h[w] += hparts[1]; sub(/s$/, "", hparts[4]); t[w] += hparts[4]; seen = 1
+    }
+    END {
+      total = 0
+      for (k in h) if (t[k] > 0) total += h[k] / t[k]
+      if (total >= 1e9) printf "%.1f GH/s", total / 1e9
+      else if (total >= 1e6) printf "%.1f MH/s", total / 1e6
+      else if (total >= 1e3) printf "%.1f KH/s", total / 1e3
+      else if (total > 0) printf "%d H/s", total
+      else if (last != "") printf "STALE"
+    }')"
+  case "$HASH_RATE_TEXT" in
+    "") HASH_RATE_TEXT="Waiting for miner output" ;;
+    STALE) HASH_RATE_TEXT="no hashes in the last 3 min, miner is not working now" ;;
+    *) HASH_RATE_FRESH="true" ;;
+  esac
+}
+
 valid_node_name() {
   case "$1" in
     ''|*[!a-z0-9-]*|-*|*-) return 1 ;;
@@ -1062,6 +1123,7 @@ cmd_setup() {
     info "Keeping node name: ${NODE_NAME}"
     info "Keeping reward address: ${WORMHOLE_ADDRESS:-unknown}"
     write_config
+    save_install_location
     echo ""
     info "Binaries refreshed to node ${NODE_VERSION} + miner ${MINER_VERSION} on ${CHAIN}. Reward identity unchanged."
     info "Start mining with: ${SCRIPT_NAME} mine"
@@ -1074,6 +1136,7 @@ cmd_setup() {
   generate_wormhole_keys
   configure_resource_defaults
   write_config
+  save_install_location
 
   echo ""
   info "Setup complete."
@@ -1386,11 +1449,10 @@ cmd_status() {
     fi
   fi
 
-  if [ -f "${LOG_DIR}/miner.log" ]; then
-    latest_rate="$(grep -Ei 'hash.?rate|[0-9]+([.][0-9]+)?[[:space:]]*[kmg]?h/s' "${LOG_DIR}/miner.log" 2>/dev/null \
-      | tail -n 1 | redact_sensitive_stream || true)"
-    [ -z "$latest_rate" ] || hash_rate="$latest_rate"
-  fi
+  hash_rate_summary "${LOG_DIR}/miner.log"
+  hash_rate="$HASH_RATE_TEXT"
+  latest_rate=""
+  [ "$HASH_RATE_FRESH" = "true" ] && latest_rate="$HASH_RATE_TEXT"
 
   if [ "$node_state" = "Running" ] && [ "$miner_state" = "Running" ] \
     && case "$sync_state" in Synced*) true ;; *) false ;; esac && [ -n "$latest_rate" ]; then
@@ -1575,6 +1637,9 @@ Or stop them manually:
 
   if [ -e "$MINING_DIR" ]; then
     info "Removing ${MINING_DIR}..."
+    if [ -f "$LOCATION_FILE" ] && grep -qxF "MINING_DIR=$(cd "$MINING_DIR" && pwd)" "$LOCATION_FILE"; then
+      rm -f "$LOCATION_FILE"
+    fi
     rm -rf "$MINING_DIR"
   fi
 

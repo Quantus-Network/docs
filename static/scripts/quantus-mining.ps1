@@ -42,6 +42,26 @@ $ErrorActionPreference = 'Stop'
 # ---------------------------------------------------------------------------
 
 $script:ScriptName = 'quantus-mining.ps1'
+
+# Where the last setup installed to, so every later command finds it without
+# the user retyping QUANTUS_MINING_DIR / QUANTUS_NODE_DATA_PATH. Environment
+# variables still win. The file holds two paths and nothing secret.
+$script:LocationFile = Join-Path $env:LOCALAPPDATA 'quantus-mining\location'
+if (-not $env:QUANTUS_MINING_DIR -and (Test-Path $script:LocationFile)) {
+  foreach ($line in Get-Content $script:LocationFile) {
+    if ($line -notmatch '^(MINING_DIR|NODE_DATA_PATH)=(.+)$') { continue }
+    $value = $Matches[2].Trim()
+    if (-not [IO.Path]::IsPathRooted($value) -or $value -match "['`"]") { continue }
+    if ($Matches[1] -eq 'MINING_DIR') { $env:QUANTUS_MINING_DIR = $value }
+    elseif (-not $env:QUANTUS_NODE_DATA_PATH) { $env:QUANTUS_NODE_DATA_PATH = $value }
+  }
+}
+
+# Per-user login entry. No administrator rights needed. Overridable only so the
+# tests can exercise it without touching the real startup list.
+$script:AutostartKey = if ($env:QUANTUS_AUTOSTART_KEY) { $env:QUANTUS_AUTOSTART_KEY } else { 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' }
+$script:AutostartName = 'QuantusMining'
+
 $script:MiningDir = if ($env:QUANTUS_MINING_DIR) { $env:QUANTUS_MINING_DIR } else { Join-Path $HOME 'quantus-mining' }
 $script:ConfigFile = Join-Path $script:MiningDir 'mining.conf'
 $script:BinDir = Join-Path $script:MiningDir 'bin'
@@ -618,6 +638,93 @@ function Select-NodeName {
   }
 }
 
+function Save-InstallLocation {
+  $dir = Split-Path $script:LocationFile -Parent
+  if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
+  $lines = @("MINING_DIR=$([IO.Path]::GetFullPath($script:MiningDir))", "NODE_DATA_PATH=$([IO.Path]::GetFullPath((Get-NodeDataPath)))")
+  Set-Content -Path $script:LocationFile -Value ($lines -join "`r`n") -Encoding ascii
+}
+
+# A copy of this exact script beside the install, so autostart and later
+# commands do not depend on wherever the user happened to download it.
+function Copy-InstalledScript {
+  $target = Join-Path $script:MiningDir $script:ScriptName
+  if (-not $PSCommandPath) { return }
+  if ([IO.Path]::GetFullPath($PSCommandPath) -eq [IO.Path]::GetFullPath($target)) { return }
+  Copy-Item -LiteralPath $PSCommandPath -Destination $target -Force
+}
+
+function Get-AutostartCommand {
+  $script_ = Join-Path $script:MiningDir $script:ScriptName
+  $log = Join-Path $script:LogDir 'autostart.log'
+  if ($script_ -match "'" -or $log -match "'") { Fail 'The install path contains a quote character, which autostart cannot handle. Reinstall to a simpler path.' }
+  # The short wait lets a USB data drive and the network come up after sign-in.
+  return "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command `"Start-Sleep 20; & '$script_' start *>> '$log'`""
+}
+
+function Get-AutostartValue {
+  try { return (Get-ItemProperty -Path $script:AutostartKey -Name $script:AutostartName -ErrorAction Stop).$($script:AutostartName) } catch { return $null }
+}
+
+function Invoke-Autostart([string[]]$AutostartArgs) {
+  $sub = if ($AutostartArgs.Count -gt 0) { $AutostartArgs[0] } else { 'status' }
+  switch ($sub) {
+    'on' {
+      if (-not (Test-Path $script:ConfigFile)) { Fail "Mining is not configured. Run: $($script:ScriptName) mine" }
+      Copy-InstalledScript
+      if (-not (Test-Path $script:AutostartKey)) { New-Item -Path $script:AutostartKey -Force | Out-Null }
+      Set-ItemProperty -Path $script:AutostartKey -Name $script:AutostartName -Value (Get-AutostartCommand)
+      Info 'Autostart: on. Mining will start about 20 seconds after you sign in to Windows.'
+      Info "Turn it off with: $($script:ScriptName) autostart off"
+    }
+    'off' {
+      if (Get-AutostartValue) { Remove-ItemProperty -Path $script:AutostartKey -Name $script:AutostartName }
+      Info 'Autostart: off. Mining will not start by itself after sign-in.'
+    }
+    'status' {
+      $v = Get-AutostartValue
+      if ($v) { Info 'Autostart: on' } else { Info "Autostart: off (turn on with: $($script:ScriptName) autostart on)" }
+    }
+    default { Fail "Usage: $($script:ScriptName) autostart on|off|status" }
+  }
+}
+
+# Turns the miner's log into one plain number. Each GPU worker logs every search
+# as "GPU worker N ...: H hashes in T s". A single search can be two seconds
+# long when a new block cuts it short, so one line swings widely. The rate shown
+# is total hashes over total seconds per worker in the last three minutes,
+# summed across workers. Nothing in that window means the miner is not working
+# now, even if its process is still alive.
+function Get-HashRateSummary([string]$MinerLog, [int]$WindowMinutes = 3) {
+  $result = @{ Text = 'Waiting for miner output'; Fresh = $false }
+  if (-not (Test-Path $MinerLog)) { return $result }
+  $pattern = '^\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})Z[^\]]*\]\s*GPU worker (\d+)\b.*?(\d+) hashes in (\d+(?:\.\d+)?)s'
+  $cutoff = (Get-Date).ToUniversalTime().AddMinutes(-$WindowMinutes)
+  $perWorker = @{}
+  $lastSeen = $null
+  foreach ($m in (Select-String -Path $MinerLog -Pattern $pattern | Select-Object -Last 2000)) {
+    $g = $m.Matches[0].Groups
+    $when = [DateTime]::SpecifyKind([DateTime]::ParseExact($g[1].Value, 'yyyy-MM-ddTHH:mm:ss', [Globalization.CultureInfo]::InvariantCulture), [DateTimeKind]::Utc)
+    $lastSeen = $when
+    if ($when -lt $cutoff) { continue }
+    $w = $g[2].Value
+    if (-not $perWorker.ContainsKey($w)) { $perWorker[$w] = @{ H = [double]0; S = [double]0 } }
+    $perWorker[$w].H += [double]$g[3].Value
+    $perWorker[$w].S += [double]$g[4].Value
+  }
+  $total = 0.0
+  foreach ($v in $perWorker.Values) { if ($v.S -gt 0) { $total += $v.H / $v.S } }
+  if ($total -gt 0) {
+    $result.Fresh = $true
+    $result.Text = if ($total -ge 1e9) { '{0:N1} GH/s' -f ($total / 1e9) } elseif ($total -ge 1e6) { '{0:N1} MH/s' -f ($total / 1e6) } elseif ($total -ge 1e3) { '{0:N1} KH/s' -f ($total / 1e3) } else { '{0:N0} H/s' -f $total }
+    return $result
+  }
+  if ($lastSeen) {
+    $result.Text = 'no hashes in the last {0} min (last seen {1:N0} min ago), miner is not working now' -f $WindowMinutes, ((Get-Date).ToUniversalTime() - $lastSeen).TotalMinutes
+  }
+  return $result
+}
+
 function Invoke-NodeRpc([string]$Method) {
   $body = '{"jsonrpc":"2.0","id":1,"method":"' + $Method + '","params":[]}'
   try {
@@ -662,6 +769,7 @@ Commands:
   restart-check             Restart in background and verify both processes
   status                    Show a redacted mining readiness summary
   uninstall [-Force]        Stop processes and remove $($script:MiningDir) (config, keys, binaries, logs)
+  autostart on|off|status   Start mining automatically when you sign in to Windows
   help                      Show this help
 
 Editable config keys: $($script:EditableKeys -join ' ')
@@ -718,6 +826,8 @@ function Invoke-Setup {
     $script:Config['MINER_PROTOCOL'] = $script:MinerProtocol
     $script:Config['CHAIN'] = $script:Manifest['_chain']
     Write-Config
+    Save-InstallLocation
+    Copy-InstalledScript
     Write-Output ''
     Info "Binaries refreshed to node $($script:Manifest['_nodeVersion']) + miner $($script:Manifest['_minerVersion']) on $($script:Manifest['_chain']). Reward identity unchanged."
     Info "Start mining with: $($script:ScriptName) mine"
@@ -734,6 +844,14 @@ function Invoke-Setup {
   $script:Config['MINER_PROTOCOL'] = $script:MinerProtocol
   $script:Config['CHAIN'] = $script:Manifest['_chain']
   Write-Config
+  Save-InstallLocation
+  Copy-InstalledScript
+
+  if ([Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
+    Write-Output ''
+    $answer = Read-Host 'Start mining automatically when you sign in to Windows? (Y/n)'
+    if ($answer -notmatch '^(n|no)$') { Invoke-Autostart @('on') }
+  }
 
   Write-Output ''
   Info 'Setup complete.'
@@ -845,12 +963,9 @@ function Invoke-Status {
     }
   }
 
-  $hashRate = 'Waiting for miner output'; $latest = ''
-  $minerLog = Join-Path $script:LogDir 'miner.log'
-  if (Test-Path $minerLog) {
-    $line = Select-String -Path $minerLog -Pattern 'hash.?rate|\d+(\.\d+)?\s*[kmgKMG]?H/s' | Select-Object -Last 1
-    if ($line) { $latest = Hide-Secrets $line.Line; $hashRate = $latest }
-  }
+  $summary = Get-HashRateSummary (Join-Path $script:LogDir 'miner.log')
+  $hashRate = $summary.Text
+  $latest = if ($summary.Fresh) { $hashRate } else { '' }
 
   $overall = 'STARTING'
   if ($nodeState -eq 'Running' -and $minerState -eq 'Running' -and $syncState -eq 'Synced' -and $latest) { $overall = 'MINING' }
@@ -923,6 +1038,11 @@ function Invoke-Uninstall {
   }
   try { Invoke-Stop } catch { }
   Info "Removing $($script:MiningDir)..."
+  if (Get-AutostartValue) { Remove-ItemProperty -Path $script:AutostartKey -Name $script:AutostartName }
+  if (Test-Path $script:LocationFile) {
+    $pointed = (Get-Content $script:LocationFile | Where-Object { $_ -like 'MINING_DIR=*' }) -replace '^MINING_DIR=', ''
+    if ($pointed -and ([IO.Path]::GetFullPath($pointed) -eq [IO.Path]::GetFullPath($script:MiningDir))) { Remove-Item $script:LocationFile -Force }
+  }
   Remove-Item $script:MiningDir -Recurse -Force
   Info 'Uninstall complete.'
   if (Test-Path $chainData) {
@@ -947,6 +1067,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     'restart-check' { Invoke-RestartCheck }
     'status' { Invoke-Status }
     'uninstall' { Invoke-Uninstall }
+    'autostart' { Invoke-Autostart $Rest }
     { $_ -in 'help', '-h', '--help' } { Invoke-Help }
     default { Fail "Unknown command: $Command. Run: $($script:ScriptName) help" }
   }

@@ -71,7 +71,7 @@ Run:
 ./quantus-mining.sh status
 ```
 
-On Windows, every command is the same with `.\quantus-mining.ps1` in place of `./quantus-mining.sh`. While syncing, the Windows status line also shows the current block, the target, the rate, and the time left.
+On Windows, every command is the same with `.\quantus-mining.ps1` in place of `./quantus-mining.sh`. Setup remembers where it installed, so later commands work without setting `QUANTUS_MINING_DIR` or `QUANTUS_NODE_DATA_PATH` again. On Windows, setup also offers to start mining automatically when you sign in. While syncing, the Windows status line also shows the current block, the target, the rate, and the time left.
 
 A complete success state shows:
 
@@ -101,6 +101,7 @@ Confirm stop-start recovery once:
 | Stop | `./quantus-mining.sh stop` |
 | Update to the supported pair, keeping your reward address | `./quantus-mining.sh setup --force` |
 | Change resource use | `./quantus-mining.sh config set CPU_WORKERS 4` |
+| Windows: start mining when you sign in | `.\quantus-mining.ps1 autostart on` (off: `autostart off`) |
 
 ## Coming from Planck
 
