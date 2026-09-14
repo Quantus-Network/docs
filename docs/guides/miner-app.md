@@ -7,7 +7,7 @@ title: Miner App Preview
 
 The Quantus Miner App provides one desktop interface for wallet setup, node sync, CPU or GPU mining, hash rate, and rewards. Release `miner-v0.6.1` is a **preview**, not the verified beginner path.
 
-The app downloads and starts node and miner binaries at runtime. It does not bundle them, pin the shared compatibility manifest, or verify their release checksums in this release. Use a dedicated Planck testnet wallet and do not use the app for assets with monetary value.
+The app downloads and starts node and miner binaries at runtime. It does not bundle them, pin the shared compatibility manifest, or verify their release checksums in this release. This release was built for the retired Planck testnet and has not been verified against mainnet. Do not use it for mainnet funds; use the verified installers in [Start Mining](/guides/mining).
 
 ## Direct downloads
 

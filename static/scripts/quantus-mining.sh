@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# quantus-mining.sh - Set up and manage verified Quantus Planck testnet mining.
+# quantus-mining.sh - Set up and manage verified Quantus mainnet mining.
 #
 # Supports macOS, Linux, and WSL2. Requires bash, curl, and tar.
 #
@@ -342,8 +342,8 @@ load_compatibility_manifest() {
   MINER_PROTOCOL="$(require_manifest_string "$file" minerProtocol)"
   evidence="$(require_manifest_string "$file" compatibilityEvidenceUrl)"
 
-  [ "$CHAIN" = "planck" ] && [ "$network_kind" = "testnet" ] && [ "$token_value" = "none" ] \
-    || die "This installer is restricted to the Planck testnet. The manifest requested a different network."
+  [ "$CHAIN" = "mainnet" ] && [ "$network_kind" = "mainnet" ] && [ -n "$token_value" ] \
+    || die "This installer is restricted to Quantus mainnet. The manifest requested a different network."
   [ "$MINER_PROTOCOL" = "quantus-miner/2" ] \
     || die "Unsupported miner protocol '${MINER_PROTOCOL}'. Nothing will be installed or started."
   case "$evidence" in
@@ -352,6 +352,8 @@ load_compatibility_manifest() {
   esac
 
   node_url_key="node${PLATFORM_KEY}Url"
+  [ -n "$(manifest_string "$file" "$node_url_key")" ] \
+    || die "The supported release pair (node ${NODE_VERSION}) has no build for ${OS}/${ARCH}. Nothing was installed. Use Apple Silicon macOS, Linux x64, or Windows x64."
   node_sha_key="node${PLATFORM_KEY}Sha256"
   miner_url_key="miner${PLATFORM_KEY}Url"
   miner_sha_key="miner${PLATFORM_KEY}Sha256"
@@ -372,7 +374,7 @@ load_compatibility_manifest() {
 
 fetch_compatibility_manifest() {
   local temp_file="${COMPATIBILITY_FILE}.download"
-  info "Fetching the supported Planck release pair..."
+  info "Fetching the supported mainnet release pair..."
   curl --proto '=https' --tlsv1.2 -fsSL "$COMPATIBILITY_URL" -o "$temp_file" \
     || die "Could not download ${COMPATIBILITY_URL}. Check your connection and retry."
   load_compatibility_manifest "$temp_file"
@@ -552,7 +554,7 @@ configure_resource_defaults() {
 }
 
 write_config() {
-  CHAIN="${CHAIN:-planck}"
+  CHAIN="${CHAIN:-mainnet}"
   MINER_LISTEN_PORT="${MINER_LISTEN_PORT:-9833}"
   CPU_WORKERS="${CPU_WORKERS:-0}"
   GPU_DEVICES="${GPU_DEVICES:-0}"
@@ -589,7 +591,7 @@ load_config() {
   INNER_HASH="$(tr -d '[:space:]' < "$INNER_HASH_FILE")"
   [ -n "$INNER_HASH" ] || die "Reward preimage file is empty. Re-run ${SCRIPT_NAME} setup --force."
   NODE_KEY_FILE="${NODE_KEY_FILE:-node_key.p2p}"
-  CHAIN="${CHAIN:-planck}"
+  CHAIN="${CHAIN:-mainnet}"
   MINER_LISTEN_PORT="${MINER_LISTEN_PORT:-9833}"
   CPU_WORKERS="${CPU_WORKERS:-0}"
   GPU_DEVICES="${GPU_DEVICES:-0}"
@@ -752,7 +754,7 @@ node_chain_dir() {
 
   base="$(node_data_path)"
   chain_root="${base}/chains"
-  expected="${chain_root}/${CHAIN:-planck}"
+  expected="${chain_root}/${CHAIN:-mainnet}"
 
   if [ -d "$expected" ]; then
     printf '%s' "$expected"
@@ -902,7 +904,7 @@ validate_editable_key() {
 
 cmd_help() {
   cat <<EOF
-${SCRIPT_NAME} - Set up and manage verified Quantus Planck testnet mining.
+${SCRIPT_NAME} - Set up and manage verified Quantus mainnet mining.
 
 Working directory: ${MINING_DIR}
 Config file:       ${CONFIG_FILE}
@@ -962,13 +964,24 @@ cmd_setup() {
   info "Platform: ${OS} / ${ARCH} (${NODE_TARGET})"
   info "Working directory: ${MINING_DIR}"
 
-  if [ -f "$CONFIG_FILE" ] && [ "$force" != "true" ]; then
-    warn "Config already exists at ${CONFIG_FILE}"
-    read -r -p "Overwrite existing setup? (y/N): " confirm
-    case "$(tolower "$confirm")" in
-      y|yes) ;;
-      *) info "Setup cancelled."; return 0 ;;
-    esac
+  # --force on an existing install refreshes binaries and the pinned pair only.
+  # The reward identity (preimage file, address, node name, resources) is kept,
+  # so moving an install forward, including from Planck to mainnet, never asks
+  # for the recovery phrase again or silently changes where rewards go.
+  local refresh_only="false"
+  if [ -f "$CONFIG_FILE" ]; then
+    if [ "$force" = "true" ] && [ -s "$INNER_HASH_FILE" ]; then
+      refresh_only="true"
+      # shellcheck source=/dev/null
+      source "$CONFIG_FILE"
+    elif [ "$force" != "true" ]; then
+      warn "Config already exists at ${CONFIG_FILE}"
+      read -r -p "Overwrite existing setup? (y/N): " confirm
+      case "$(tolower "$confirm")" in
+        y|yes) ;;
+        *) info "Setup cancelled."; return 0 ;;
+      esac
+    fi
   fi
 
   download_binaries "$force"
@@ -978,6 +991,16 @@ cmd_setup() {
     "$NODE_BIN" key generate-node-key --file "$NODE_KEY_PATH"
   else
     info "Using existing node key at ${NODE_KEY_PATH}"
+  fi
+
+  if [ "$refresh_only" = "true" ]; then
+    info "Keeping node name: ${NODE_NAME}"
+    info "Keeping reward address: ${WORMHOLE_ADDRESS:-unknown}"
+    write_config
+    echo ""
+    info "Binaries refreshed to node ${NODE_VERSION} + miner ${MINER_VERSION} on ${CHAIN}. Reward identity unchanged."
+    info "Start mining with: ${SCRIPT_NAME} mine"
+    return 0
   fi
 
   NODE_NAME="quantus-$(hostname 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-' | cut -c1-24)"
@@ -1056,6 +1079,7 @@ Then re-run: ${SCRIPT_NAME} setup --force"
   if [ "$installed_node_version" != "$NODE_VERSION" ] \
     || [ "$installed_miner_version" != "$MINER_VERSION" ] \
     || [ "$installed_chain" != "$CHAIN" ]; then
+    [ "$installed_chain" = "planck" ] && warn "CHAIN=planck is the retired public testnet. Planck chain data is a different network and is not reused."
     die "Installed mining files do not match the supported manifest.
 Installed: node ${installed_node_version:-unknown} + miner ${installed_miner_version:-unknown} on ${installed_chain:-unknown}
 Required:  node ${NODE_VERSION} + miner ${MINER_VERSION} on ${CHAIN}
@@ -1298,7 +1322,7 @@ cmd_status() {
 
 Quantus mining status
 Overall:          ${overall}
-Network:          Planck testnet (tokens have no monetary value)
+Network:          ${CHAIN:-unknown} (mainnet QTC has value; keep your recovery phrase offline)
 Compatibility:    node ${NODE_VERSION:-unknown} + miner ${MINER_VERSION:-unknown}
 Node:             ${node_state}
 Sync:             ${sync_state}

@@ -9,7 +9,7 @@ Technical specification for the QUIC-based protocol between the Quantus node and
 
 ## Overview
 
-The node delegates the mining task (finding a valid nonce) to external miner services over persistent QUIC connections. The node provides the necessary parameters (header hash, difficulty threshold) and each miner independently searches for a valid nonce using the PoW rules defined in the `qpow-math` crate (double Poseidon2 hash). Miners push results back when found.
+The node delegates the mining task (finding a valid nonce) to external miner services over persistent QUIC connections. The node provides the necessary parameters (header hash, difficulty threshold) and each miner independently searches for a valid nonce using the PoW rules defined in the `qpow-math` crate (Poseidon2 squeeze-twice over `header_hash || nonce`). Miners push results back when found.
 
 The miner channel is a **private control plane**. Miners must authenticate with a shared token in `Ready { token }` and pin the node's TLS certificate SHA-256. Do not expose `--miner-listen-port` (UDP) to the public internet -- auth is not a substitute for network isolation. See the [Mining Guide](/guides/mining) for operator setup.
 
@@ -214,14 +214,14 @@ Miner                                        Node
 # Auth token + TLS cert/fingerprint are created on first run under
 # <base-path>/chains/<chain>/ (token is not logged — read miner-auth-token;
 # fingerprint is logged; override auth path with --miner-auth-token-file).
-quantus-node --validator --chain planck --miner-listen-port 9833
+quantus-node --validator --chain mainnet --miner-listen-port 9833
 ```
 
 ### Miner
 
 ```bash
-CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/planck"
-# Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/planck"
+CHAIN_DIR="$HOME/Library/Application Support/quantus-node/chains/mainnet"
+# Linux: CHAIN_DIR="$HOME/.local/share/quantus-node/chains/mainnet"
 quantus-miner serve \
   --node-addr 127.0.0.1:9833 \
   --auth-token-file "$CHAIN_DIR/miner-auth-token" \

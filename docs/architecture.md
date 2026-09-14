@@ -27,11 +27,12 @@ graph TB
 
     subgraph Runtime["Runtime Layer (WASM)"]
         Core["Core Pallets<br/>System, Balances, Timestamp"]
-        QPow["QPoW Pallet<br/>Difficulty, Mining Rewards"]
+        QPow["QPoW Pallet<br/>Difficulty retarget"]
+        MiningRewards["Mining Rewards Pallet<br/>Emission, miner payout"]
         Wormhole["Wormhole Pallet<br/>ZK Proof Verification"]
-        Safety["Safety Pallets<br/>Reversible Transfers,<br/>High-Security Accounts,<br/>Recovery"]
-        Gov["Governance<br/>OpenGov, Conviction Voting,<br/>Technical Collective"]
-        Treasury["Treasury<br/>Fee Distribution"]
+        Safety["Safety Pallets<br/>Reversible Transfers,<br/>High-Security Accounts"]
+        Gov["Governance<br/>Tech Collective,<br/>Tech Referenda"]
+        Treasury["Treasury<br/>6-of-10 multisig"]
     end
 
     subgraph Crypto["Cryptographic Primitives"]
@@ -62,7 +63,7 @@ The client-side implementation handles networking, consensus participation, and 
 | Component | Description | Source |
 |-----------|-------------|--------|
 | **P2P Networking** | Post-quantum secured via forked libp2p with ML-KEM-768 encryption and ML-DSA-87 peer identity | [qp-libp2p-noise](https://github.com/Quantus-Network/qp-libp2p-noise), [sc-network-pqc](https://github.com/Quantus-Network/sc-network-pqc) |
-| **QPoW Consensus** | Custom proof-of-work engine using double Poseidon2 hashing | [chain/client/consensus/qpow](https://github.com/Quantus-Network/chain/tree/main/client/consensus/qpow) |
+| **QPoW Consensus** | Custom proof-of-work engine: Poseidon2 squeeze-twice over header hash + nonce | [chain/client/consensus/qpow](https://github.com/Quantus-Network/chain/tree/main/client/consensus/qpow) |
 | **Transaction Pool** | Standard Substrate transaction pool with Dilithium signature validation | [chain/node](https://github.com/Quantus-Network/chain/tree/main/node) |
 | **Storage** | RocksDB backend with Poseidon-hashed state trie (ZK-compatible) | [zk-trie](https://github.com/Quantus-Network/zk-trie) |
 
@@ -72,14 +73,14 @@ The WASM-compiled state transition function, built using FRAME pallets. This is 
 
 **Core pallets:**
 - **System / Balances / Timestamp:** Standard Substrate infrastructure
-- **QPoW:** Mining difficulty adjustment, nonce verification, total work tracking
-- **Mining Rewards:** Emission schedule (smooth exponential decay of 21M fixed supply)
+- **QPoW:** Difficulty retarget and nonce verification
+- **Mining Rewards:** Emission schedule and miner payout (smooth decay of 21M fixed supply; 100% of block rewards to the miner)
 - **Wormhole:** ZK proof verification for privacy-preserving transfers
 - **Reversible Transfers:** Optional cancellation windows and high-security account protection
 - **Multisig:** Multi-signature accounts with guardian oversight
-- **Recovery:** Onchain survivorship (social recovery / "crypto will")
-- **Governance:** Polkadot OpenGov with conviction voting and technical collective
-- **Treasury:** Fee collection and distribution
+- **Governance:** Technical collective + tech referenda (the public conviction-voting lane was removed)
+- **Treasury:** 6-of-10 multisig. Not paid from block rewards or standard fees.
+- **Vesting:** Genesis allocation schedules (27% of max supply)
 
 ### Cryptographic Primitives
 
@@ -89,7 +90,7 @@ Every cryptographic algorithm was chosen for a specific reason:
 |-----------|-----------|-----------------|
 | **Signatures** | ML-DSA-87 (Dilithium) | NIST Level 5 post-quantum standard. Lattice-based, no known quantum attacks. |
 | **Block/Storage Hashing** | Poseidon2 | ~100x more efficient than SHA-256 inside ZK circuits. Enables ZK proofs over blockchain state. |
-| **PoW Hashing** | Double Poseidon2 | ZK-friendly mining means proofs of mining work are cheap to verify in circuits. |
+| **PoW Hashing** | Poseidon2 (squeeze twice, 512-bit) | ZK-friendly mining means proofs of mining work are cheap to verify in circuits. |
 | **ZK Proofs** | Plonky2 (STARKs) | No trusted setup required. Recursive proof composition enables aggregation. |
 | **P2P Encryption** | ML-KEM-768 (Kyber) | NIST post-quantum key encapsulation. Secures node-to-node communication. |
 | **Key Derivation** | HD-Lattice (BIP-44 adapted) | Hierarchical deterministic wallets adapted for lattice-based cryptography. Path: `m/44'/189189'/index'/0'/0'` |
@@ -101,7 +102,7 @@ Traditional PQC adoption faces a fundamental scaling crisis:
 - Bitcoin ECDSA signature: **~65 bytes**
 - ML-DSA-87 (Dilithium) signature: **~4,627 bytes** (70x larger)
 
-If Bitcoin simply swapped to PQC signatures, throughput would drop from ~7 TPS to a fraction of that. Every block would be consumed by signature data.
+If Bitcoin simply swapped to PQC signatures with no block-size change, the [whitepaper](https://quantus.com/whitepaper) puts its quantum-secure throughput (QTPS) at about 1.1, down from ~10 TPS. Every block would be consumed by signature data.
 
 ## Quantus's Solution: Wormhole Addresses
 
@@ -109,10 +110,16 @@ Quantus solves the signature bloat problem with aggregated ZK proofs:
 
 1. User burns coins to an unspendable **wormhole address** derived from `H(H(salt|secret))`
 2. User generates a ZK proof (using Plonky2) that they know the preimage
-3. Thousands of these proofs are **aggregated** into a single ~100KB proof
+3. Batches of proofs are **aggregated** into a compact Plonky2 proof
 4. The aggregated proof is posted onchain, verifying all transactions at once
 
-**Result:** Raw PQC throughput of ~685 TPS is amplified to **~3,800 TPS** (~5.5x improvement).
+Block space is the bound: **12-second** target block time and **3.75 MB** of transactions per block. Every Quantus transaction is post-quantum, so TPS and QTPS are the same number ([whitepaper](https://quantus.com/whitepaper)):
+
+| Mode | Transfers / block | QTPS |
+|------|-------------------|------|
+| Transparent, ML-DSA-87 | ~510 | **~43** |
+| Encrypted, current two-layer aggregation | ~5,200 | **~430** |
+| Encrypted, theoretical ceiling | ~33,000 | **~2,800** |
 
 The privacy benefit is a side effect: the link between the original sender and the exit address is broken onchain (similar to Tornado Cash's mechanism). Amounts and exit addresses are visible; the sender-receiver link is not.
 
@@ -173,7 +180,7 @@ flowchart LR
 
 **Why no smart contracts?** Quantus is money, not a general-purpose compute platform. Limiting scope reduces attack surface and allows optimization for the specific use case of quantum-secure value transfer.
 
-**Why fixed 21M supply?** Bitcoin's monetary model works. Quantus uses smooth exponential decay emission (`Reward = (MaxSupply - CurrentSupply) / K`) instead of Bitcoin's abrupt halvings, avoiding the mining incentive cliffs that halvings create.
+**Why fixed 21M supply?** Bitcoin's monetary model works. 27% is minted at genesis (vested). The rest is emitted to miners with smooth exponential decay (`Reward = (MaxSupply - CurrentSupply) / K`) instead of Bitcoin's abrupt halvings. There is no mining-time dev tax.
 
 ## Next Steps
 

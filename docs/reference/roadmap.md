@@ -13,55 +13,25 @@ draft: true
 | **Dec 2024** | Inception -- Substrate framework chosen | Done |
 | **July 2025** | Alpha -- Testnet live, Dilithium signatures integrated | Done |
 | **Nov 2025** | Beta -- QPoW Poseidon2 consensus live | Done |
-| **Q1 2026** | Foundation -- Content systems, community growth, docs, tokenomics finalization, audit completion | Done |
-| **March 2026** | New testnet release | In progress |
-| **June 6, 2026** | [Q-Day Event](https://q.day) -- Quantum risk awareness, industry partnerships | Planned |
-| **May 2026** | Public sale begins | Planned |
-| **June 2026** | TGE (Token Generation Event) | Planned |
-| **Q2 2026** | Mainnet launch | Planned |
+| **Q1 2026** | Foundation -- docs, tokenomics, first audits | Done |
+| **June 6, 2026** | [Q-Day](https://q.day) -- quantum risk awareness event | Done |
+| **Sep 9, 2026** | Quantus **mainnet** launch (`--chain mainnet`, QTC) | Done |
 
-## Current Status (March 2026)
+Planck (public testnet) is retired. It does not share history or balances with mainnet.
 
-**Live:**
-- Public testnet (Dirac)
-- Mining: CPU, GPU, and GUI miner applications
-- Mobile / desktop wallet app (Quantus Apps)
+## Live
 
-**Completed:**
-- Tokenomics design finalized
-- Pitch deck v2 finalized
-- Eiger audit (hash + consensus) completed
-- Neodyme audit (Dilithium signatures) completed
-- Messari research report published
-- App redesign completed
-- Logo redesign near-final
+- Mainnet mining (CPU / GPU via `quantus-node` + `quantus-miner`)
+- Wallet app (wormhole balances spendable directly)
+- Explorer, telemetry, docs.quantus.com
 
-**In Progress:**
+## In progress
+
 - Eiger ZK circuit audit
-- Hashcloak threshold signature audit
-- NEAR Intents integration (swap button / bridge)
-- docs.quantus.com (this site)
-- Fundraising conversations (Round 3)
-- "State of Quantum" industry report
+- Hashcloak threshold signature audit (`near-mpc`)
+- NEAR Intents / swap-button bridge
 
-**Planned:**
-- Website facelift (following logo finalization)
-- Apple App Store approval for swap button (~6 week process)
-- Public sale infrastructure (NEAR launchpad backend)
+## Completed audits
 
-## Traction
-
-| Metric | Value |
-|--------|-------|
-| Telegram members | 2,300+ |
-| @QuantusNetwork followers | ~10,000 |
-| Audits completed | 2 (Eiger, Neodyme) |
-| Audits in progress | 2 (Eiger ZK, Hashcloak) |
-| Total raised | $2.42M |
-
-## Q-Day Event
-
-**Date:** June 6, 2026
-**Website:** [q.day](https://q.day)
-
-An industry event focused on the quantum threat to cryptocurrency. Co-marketing push with partners examining chains' quantum roadmaps, risks, and advancements. The "State of Quantum" report will be published alongside this event.
+- Eiger: Poseidon2 + QPoW
+- Neodyme: ML-DSA-87 (`qp-rusty-crystals`)

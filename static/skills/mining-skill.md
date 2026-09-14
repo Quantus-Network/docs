@@ -1,12 +1,12 @@
 ---
 name: mining
-description: Safely start and verify Quantus Planck testnet mining with the official pinned installer.
+description: Safely start and verify Quantus mainnet mining with the official pinned installer.
 user_invocable: true
 ---
 
 # Quantus Mining
 
-Use this skill only for the Planck testnet. Planck tokens have no monetary value and the network may reset.
+Use this skill for Quantus mainnet. Mainnet QTC has value: the recovery phrase controls real funds. Planck is the retired testnet; never set it up.
 
 ## Sources of truth
 
@@ -15,7 +15,7 @@ Use this skill only for the Planck testnet. Planck tokens have no monetary value
 - Installer, macOS / Linux / WSL2: https://docs.quantus.com/scripts/quantus-mining.sh
 - Installer, native Windows: https://docs.quantus.com/scripts/quantus-mining.ps1
 
-The supported pair is node `v0.10.0`, miner `v4.0.2`, and protocol `quantus-miner/2`. The compatibility evidence is the official miner `v4.0.0` release note, which requires node `v0.10.0+`. Never resolve node and miner `latest` independently.
+The supported pair is node `v1.0.1`, miner `v4.2.0`, and protocol `quantus-miner/2`. Node `v1.0.1` is the first release with the mainnet chain spec. Never resolve node and miner `latest` independently.
 
 ## Safety rules
 
@@ -78,6 +78,7 @@ Do not mark the task complete unless it prints `Restart recovery: PASSED` and th
 | PowerShell will not run the script | `Unblock-File .\quantus-mining.ps1`, or start it with `powershell -ExecutionPolicy Bypass -File`. |
 | Windows sync has peers but the block number is not moving | Check free disk space, peer connectivity and disk activity, then compare block progress with `status`. Do not disable antivirus protection or add exclusions as a default fix. |
 | Pair mismatch | Run `./quantus-mining.sh setup --force`. |
+| Install still on Planck | Run `setup --force`. It moves to mainnet and keeps the existing reward address; do not ask for the phrase again. |
 | Node or miner stopped | Run `./quantus-mining.sh mine`. |
 | Still syncing | Leave it running and check `status` later. |
 | Machine sluggish | Set `CPU_WORKERS` to 1 and run `restart-check`. |
@@ -85,4 +86,4 @@ Do not mark the task complete unless it prints `Restart recovery: PASSED` and th
 
 ## Completion report
 
-Report only non-secret facts: operating system, architecture, Planck testnet, node and miner versions, process states, sync state, hash-rate summary, public reward address, public telemetry node name, and restart result. Redact any 64-character hex value found in logs. Never copy raw logs into chat.
+Report only non-secret facts: operating system, architecture, network (mainnet), node and miner versions, process states, sync state, hash-rate summary, public reward address, public telemetry node name, and restart result. Redact any 64-character hex value found in logs. Never copy raw logs into chat.

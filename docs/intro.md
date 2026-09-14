@@ -24,8 +24,8 @@ These docs follow a layered depth model: start broad, go deep where it matters t
 ### Deep Dives
 
 - [Post-Quantum Cryptography](./deep-dives/pqc): ML-DSA-87 signatures, Poseidon2 hashing, and quantum threat modeling
-- [QPoW Consensus & Mining](./deep-dives/qpow): Lattice-based proof of work and mining economics
-- [Wormhole & ZK Scaling](./deep-dives/wormhole): Privacy-preserving addresses and ZK proof aggregation for 3,800 TPS
+- [QPoW Consensus & Mining](./deep-dives/qpow): Poseidon2 proof of work, difficulty retarget, and mining economics
+- [Wormhole & ZK Scaling](./deep-dives/wormhole): Privacy-preserving addresses and ZK proof aggregation (~430 QTPS today)
 - [User Safety](./deep-dives/safety): Safety mechanics to prevent wrench attacks, fat fingering transactions, and losing funds. Guardian accounts, time-locked transactions, human readable checkphrases, etc.
 - [NEAR Integration](./deep-dives/near-integration): Cross-chain bridge and interoperability layer
 - [External Miner Protocol](./deep-dives/miner-protocol): QUIC protocol specification for custom miner implementations
@@ -36,7 +36,7 @@ These docs follow a layered depth model: start broad, go deep where it matters t
 
 ## Quick Links
 
-- [Tools and Community](./reference/tools-and-community): Explorer, telemetry, faucet, socials, and all external links
+- [Tools and Community](./reference/tools-and-community): Explorer, telemetry, wallet, socials, and all external links
 - [GitHub Organization](https://github.com/Quantus-Network): All repositories
 - [Whitepaper](https://quantus.com/whitepaper)
 - [Research Forum](https://research.quantus.com)

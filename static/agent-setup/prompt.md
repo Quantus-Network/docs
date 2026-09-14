@@ -1,8 +1,9 @@
 # Set up Quantus mining
 
-Help the user set up Planck testnet mining on this computer. Complete ordinary
-setup work with your tools, but pause for private wallet input. Planck tokens
-have no monetary value and the network may reset. This is not a mainnet setup.
+Help the user set up Quantus mainnet mining on this computer. Complete ordinary
+setup work with your tools, but pause for private wallet input. Mainnet QTC has
+value: the recovery phrase controls real funds. Never set up the retired Planck
+testnet, and never promise earnings.
 
 ## Read before running
 

@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 <#
-quantus-mining.ps1 - Set up and manage verified Quantus Planck testnet mining on Windows.
+quantus-mining.ps1 - Set up and manage verified Quantus mainnet mining on Windows.
 
 Native Windows twin of quantus-mining.sh. Same commands, same compatibility
 manifest, same checksums, same hidden recovery-phrase prompt, same status
@@ -125,8 +125,8 @@ function Get-FileSha256([string]$Path) {
   return (Get-FileHash -Path $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
-function Assert-Sha256([string]$Path, [string]$Expected) {
-  $name = Split-Path $Path -Leaf
+function Assert-Sha256([string]$Path, [string]$Expected, [string]$Label = '') {
+  $name = if ($Label) { $Label } else { Split-Path $Path -Leaf }
   if (-not $Expected -or $Expected -notmatch '^[0-9a-f]{64}$') {
     Fail "Invalid SHA-256 value for $name. No files were installed."
   }
@@ -187,8 +187,8 @@ function Import-CompatibilityManifest([string]$Path) {
   $m['_minerProtocol'] = Read-ManifestString $m 'minerProtocol'
   $evidence = Read-ManifestString $m 'compatibilityEvidenceUrl'
 
-  if ($m['_chain'] -ne 'planck' -or $kind -ne 'testnet' -or $token -ne 'none') {
-    Fail 'This installer is restricted to the Planck testnet. The manifest requested a different network.'
+  if ($m['_chain'] -ne 'mainnet' -or $kind -ne 'mainnet' -or -not $token) {
+    Fail 'This installer is restricted to Quantus mainnet. The manifest requested a different network.'
   }
   if ($m['_minerProtocol'] -ne 'quantus-miner/2') {
     Fail "Unsupported miner protocol '$($m['_minerProtocol'])'. Nothing will be installed or started."
@@ -217,7 +217,7 @@ function Import-CompatibilityManifest([string]$Path) {
 
 function Get-CompatibilityManifest {
   $temp = "$($script:CompatibilityFile).download"
-  Info 'Fetching the supported Planck release pair...'
+  Info 'Fetching the supported mainnet release pair...'
   Invoke-Download $script:CompatibilityUrl $temp
   Import-CompatibilityManifest $temp | Out-Null
   Move-Item $temp $script:CompatibilityFile -Force
@@ -273,7 +273,7 @@ function Install-MinerBinary {
   Info "Downloading quantus-miner $($script:Manifest['_minerVersion']) ($($script:MinerAsset))..."
   $temp = "$($script:MinerBin).download"
   Invoke-Download $url $temp
-  Assert-Sha256 $temp $sha
+  Assert-Sha256 $temp $sha $script:MinerAsset
   Move-Item $temp $script:MinerBin -Force
   Info "Installed quantus-miner to $($script:MinerBin)"
 }
@@ -352,7 +352,7 @@ function Set-ResourceDefaults {
 
 function Write-Config {
   $c = $script:Config
-  if (-not $c.ContainsKey('CHAIN')) { $c['CHAIN'] = 'planck' }
+  if (-not $c.ContainsKey('CHAIN')) { $c['CHAIN'] = 'mainnet' }
   if (-not $c.ContainsKey('MINER_LISTEN_PORT')) { $c['MINER_LISTEN_PORT'] = '9833' }
   if (-not $c.ContainsKey('CPU_WORKERS')) { $c['CPU_WORKERS'] = '0' }
   if (-not $c.ContainsKey('GPU_DEVICES')) { $c['GPU_DEVICES'] = '0' }
@@ -391,7 +391,7 @@ function Read-Config {
   }
   $c['_innerHash'] = (Get-Content $script:InnerHashFile -Raw).Trim()
   if (-not $c['_innerHash']) { Fail "Reward preimage file is empty. Re-run $($script:ScriptName) setup -Force." }
-  foreach ($pair in @(@('CHAIN', 'planck'), @('MINER_LISTEN_PORT', '9833'), @('CPU_WORKERS', '0'), @('GPU_DEVICES', '0'), @('NODE_KEY_FILE', 'node_key.p2p'))) {
+  foreach ($pair in @(@('CHAIN', 'mainnet'), @('MINER_LISTEN_PORT', '9833'), @('CPU_WORKERS', '0'), @('GPU_DEVICES', '0'), @('NODE_KEY_FILE', 'node_key.p2p'))) {
     if (-not $c.ContainsKey($pair[0])) { $c[$pair[0]] = $pair[1] }
   }
   $script:Config = $c
@@ -416,7 +416,7 @@ function Get-AvailableStorageBytes {
 }
 
 function Test-SetupStorage {
-  # The pinned node v0.10.0 MINING.md specifies 100 GB available for setup.
+  # The pinned node v1.0.1 MINING.md specifies 100 GB available for setup.
   $required = 100000000000L
   try { $available = Get-AvailableStorageBytes } catch { Fail 'Cannot measure free storage. Choose an available local data drive using QUANTUS_NODE_DATA_PATH.' }
   if ($available -lt $required) {
@@ -531,9 +531,27 @@ function Wait-ForMinerAuthFiles([int]$Timeout = 30) {
   Fail ("Timed out waiting for miner auth files:`n  {0}`n  {1}`nStart the node first and wait until it is listening." -f (Get-MinerAuthTokenPath), (Get-MinerTlsPinPath))
 }
 
+# Launches through WMI rather than Start-Process. Start-Process with redirection
+# hands this script's own standard handles down to the child. When the script's
+# output is captured (an agent, CI, anything reading it through a pipe), the
+# long-running node and miner then hold that pipe open, and the caller waits for
+# it forever even though start has finished. A WMI-created process inherits
+# nothing, and cmd.exe does the log redirection on the far side.
 function Start-Hidden([string]$Exe, [string[]]$Arguments, [string]$Log) {
-  $p = Start-Process -FilePath $Exe -ArgumentList $Arguments -RedirectStandardOutput "$Log.out" -RedirectStandardError $Log -WindowStyle Hidden -PassThru
-  return $p
+  $quoted = ($Arguments | ForEach-Object { if ($_ -match '[\s"]') { '"' + ($_ -replace '"', '\"') + '"' } else { $_ } }) -join ' '
+  $commandLine = 'cmd.exe /d /s /c ""{0}" {1} 1>"{2}.out" 2>"{2}""' -f $Exe, $quoted, $Log
+  $startup = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]0 }
+  $created = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $commandLine; ProcessStartupInformation = $startup }
+  if ($created.ReturnValue -ne 0) { Fail "Could not start $(Split-Path $Exe -Leaf) (WMI error $($created.ReturnValue))." }
+  $name = Split-Path $Exe -Leaf
+  for ($i = 0; $i -lt 50; $i++) {
+    $child = Get-CimInstance Win32_Process -Filter "ParentProcessId = $($created.ProcessId)" -ErrorAction SilentlyContinue |
+      Where-Object { $_.Name -eq $name } | Select-Object -First 1
+    if ($child) { return (Get-Process -Id $child.ProcessId) }
+    if (-not (Get-Process -Id $created.ProcessId -ErrorAction SilentlyContinue)) { break }
+    Start-Sleep -Milliseconds 100
+  }
+  Fail "$name exited immediately. Check $Log"
 }
 
 function Confirm-StartPrerequisites {
@@ -542,6 +560,7 @@ function Confirm-StartPrerequisites {
   Test-Platform
   Import-CompatibilityManifest $script:CompatibilityFile | Out-Null
   $c = $script:Config; $m = $script:Manifest
+  if ($c['CHAIN'] -eq 'planck') { Warn 'CHAIN=planck is the retired public testnet. Planck chain data is a different network and is not reused.' }
   if ($c['NODE_VERSION'] -ne $m['_nodeVersion'] -or $c['MINER_VERSION'] -ne $m['_minerVersion'] -or $c['CHAIN'] -ne $m['_chain']) {
     Fail ("Installed mining files do not match the supported manifest.`nInstalled: node {0} + miner {1} on {2}`nRequired:  node {3} + miner {4} on {5}`nRun: {6} setup -Force" -f $c['NODE_VERSION'], $c['MINER_VERSION'], $c['CHAIN'], $m['_nodeVersion'], $m['_minerVersion'], $m['_chain'], $script:ScriptName)
   }
@@ -583,7 +602,7 @@ function Format-Eta([double]$Seconds) {
 
 function Invoke-Help {
   @"
-$($script:ScriptName) - Set up and manage verified Quantus Planck testnet mining on Windows.
+$($script:ScriptName) - Set up and manage verified Quantus mainnet mining on Windows.
 
 Working directory: $($script:MiningDir)
 Config file:       $($script:ConfigFile)
@@ -623,19 +642,43 @@ function Invoke-Setup {
   Info "Platform: windows / x64 ($($script:NodeTarget))"
   Info "Working directory: $($script:MiningDir)"
 
-  if ((Test-Path $script:ConfigFile) -and -not $Force) {
-    Warn "Config already exists at $($script:ConfigFile)"
-    $confirm = Read-Host 'Overwrite existing setup? (y/N)'
-    if ($confirm -notmatch '^(y|yes)$') { Info 'Setup cancelled.'; return }
+  # -Force on an existing install refreshes binaries and the pinned pair only.
+  # The reward identity (preimage file, address, node name, resources) is kept,
+  # so moving an install forward, including from Planck to mainnet, never asks
+  # for the recovery phrase again or silently changes where rewards go.
+  $refresh = $false
+  if (Test-Path $script:ConfigFile) {
+    if ($Force -and (Test-Path $script:InnerHashFile) -and (Get-Item $script:InnerHashFile).Length -gt 0) {
+      $refresh = $true
+      Read-Config | Out-Null
+    } elseif (-not $Force) {
+      Warn "Config already exists at $($script:ConfigFile)"
+      $confirm = Read-Host 'Overwrite existing setup? (y/N)'
+      if ($confirm -notmatch '^(y|yes)$') { Info 'Setup cancelled.'; return }
+    }
   }
 
   Install-Binaries
 
   if (-not (Test-Path $script:NodeKeyPath)) {
     Info 'Generating node P2P identity...'
-    & $script:NodeBin key generate-node-key --file $script:NodeKeyPath | Out-Null
+    & $script:NodeBin key generate-node-key --file $script:NodeKeyPath 2>&1 | Out-Null
   } else {
     Info "Using existing node key at $($script:NodeKeyPath)"
+  }
+
+  if ($refresh) {
+    Info "Keeping node name: $($script:Config['NODE_NAME'])"
+    Info "Keeping reward address: $($script:Config['WORMHOLE_ADDRESS'])"
+    $script:Config['NODE_VERSION'] = $script:Manifest['_nodeVersion']
+    $script:Config['MINER_VERSION'] = $script:Manifest['_minerVersion']
+    $script:Config['MINER_PROTOCOL'] = $script:MinerProtocol
+    $script:Config['CHAIN'] = $script:Manifest['_chain']
+    Write-Config
+    Write-Output ''
+    Info "Binaries refreshed to node $($script:Manifest['_nodeVersion']) + miner $($script:Manifest['_minerVersion']) on $($script:Manifest['_chain']). Reward identity unchanged."
+    Info "Start mining with: $($script:ScriptName) mine"
+    return
   }
 
   $host_ = ($env:COMPUTERNAME.ToLowerInvariant() -replace '[^a-z0-9-]', '')
@@ -658,16 +701,18 @@ function Invoke-Setup {
   Info 'If sync stalls, check free disk space and run status again to compare block progress.'
 }
 
-function Invoke-Config([string[]]$Args) {
-  $sub = if ($Args.Count -gt 0) { $Args[0] } else { '' }
+# The parameter is not named $Args: that is PowerShell's automatic variable,
+# it shadowed the argument, and every config subcommand printed usage.
+function Invoke-Config([string[]]$ConfigArgs) {
+  $sub = if ($ConfigArgs.Count -gt 0) { $ConfigArgs[0] } else { '' }
   switch ($sub) {
     'show' {
       if (-not (Test-Path $script:ConfigFile)) { Fail "Config not found. Run: $($script:ScriptName) setup" }
       Get-Content $script:ConfigFile | Write-Output
     }
     'set' {
-      if ($Args.Count -lt 3) { Fail "Usage: $($script:ScriptName) config set KEY VALUE" }
-      $key = $Args[1]; $value = $Args[2]
+      if ($ConfigArgs.Count -lt 3) { Fail "Usage: $($script:ScriptName) config set KEY VALUE" }
+      $key = $ConfigArgs[1]; $value = $ConfigArgs[2]
       if ($script:EditableKeys -notcontains $key) { Fail "Key not editable via 'set': $key. Editable: $($script:EditableKeys -join ' ')" }
       Read-Config | Out-Null
       $script:Config[$key] = $value
@@ -768,7 +813,7 @@ function Invoke-Status {
 
 Quantus mining status
 Overall:          $overall
-Network:          Planck testnet (tokens have no monetary value)
+Network:          $($c['CHAIN']) (mainnet QTC has value; keep your recovery phrase offline)
 Compatibility:    node $($c['NODE_VERSION']) + miner $($c['MINER_VERSION'])
 Node:             $nodeState
 Sync:             $syncState$(if ($syncDetail) { ", $syncDetail" })

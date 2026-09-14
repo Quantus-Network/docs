@@ -47,17 +47,17 @@ function runBash(body: string) {
 }
 
 describe('mining compatibility manifest', () => {
-  test('pins one supported testnet pair with official evidence', () => {
+  test('pins one supported mainnet pair with official evidence', () => {
     expect(manifest.schemaVersion).toBe('1');
     expect(manifest.status).toBe('supported');
-    expect(manifest.networkId).toBe('planck');
-    expect(manifest.networkKind).toBe('testnet');
-    expect(manifest.tokenValue).toBe('none');
-    expect(manifest.nodeVersion).toBe('v0.10.0');
-    expect(manifest.minerVersion).toBe('v4.0.2');
+    expect(manifest.networkId).toBe('mainnet');
+    expect(manifest.networkKind).toBe('mainnet');
+    expect(manifest.tokenValue).toBe('QTC');
+    expect(manifest.nodeVersion).toBe('v1.0.1');
+    expect(manifest.minerVersion).toBe('v4.2.0');
     expect(manifest.minerProtocol).toBe('quantus-miner/2');
     expect(manifest.compatibilityEvidenceUrl).toBe(
-      'https://github.com/Quantus-Network/quantus-miner/releases/tag/v4.0.0',
+      'https://github.com/Quantus-Network/quantus-miner/releases/tag/v4.2.0',
     );
   });
 
@@ -157,7 +157,7 @@ describe('installer safety helpers', () => {
       `source '${shellScriptPath}'; PLATFORM_KEY=DarwinArm64; NODE_TARGET=aarch64-apple-darwin; MINER_ASSET=quantus-miner-macos-aarch64; load_compatibility_manifest '${shellManifestPath}'; printf '%s' "$CHAIN|$NODE_VERSION|$MINER_VERSION|$MINER_PROTOCOL"`,
     );
     expect(result.status).toBe(0);
-    expect(result.stdout).toBe('planck|v0.10.0|v4.0.2|quantus-miner/2');
+    expect(result.stdout).toBe('mainnet|v1.0.1|v4.2.0|quantus-miner/2');
   });
 
   test('fails closed on a checksum mismatch', () => {
@@ -241,7 +241,7 @@ describe('windows installer', () => {
   });
 
   test('uses the Windows assets the manifest publishes', () => {
-    expect(manifest.nodeWindowsX8664Url).toMatch(/quantus-node-v0\.10\.0-x86_64-pc-windows-msvc\.zip$/);
+    expect(manifest.nodeWindowsX8664Url).toMatch(/quantus-node-v1\.0\.1-x86_64-pc-windows-msvc\.zip$/);
     expect(manifest.minerWindowsX8664Url).toMatch(/quantus-miner-windows-x86_64\.exe$/);
     expect(ps1).toContain("'x86_64-pc-windows-msvc'");
     expect(ps1).toContain("'quantus-miner-windows-x86_64.exe'");
@@ -302,7 +302,7 @@ describe('windows installer', () => {
       load + `$m = Import-CompatibilityManifest '${manifestPath.replaceAll('\\', '\\\\')}'; "$($m['_chain'])|$($m['_nodeVersion'])|$($m['_minerVersion'])|$($m['_minerProtocol'])"`,
     );
     expect(pair.status).toBe(0);
-    expect(pair.stdout.trim()).toBe('planck|v0.10.0|v4.0.2|quantus-miner/2');
+    expect(pair.stdout.trim()).toBe('mainnet|v1.0.1|v4.2.0|quantus-miner/2');
 
     const protocol = runPowerShell(
       load + `(Get-MinerProtocol 'x --miner-auth-token-file' 'y --auth-token-file --tls-cert-sha256-file') + '|' + (Get-MinerProtocol 'a' 'b')`,
@@ -327,4 +327,47 @@ describe('windows installer', () => {
     expect(redact.stdout).not.toContain('token123');
     expect(redact.stdout).not.toContain('alpha');
   }, 20_000); // Five PowerShell startups can exceed Bun's default five seconds.
+});
+
+describe('mainnet repin', () => {
+  test('never pairs a platform whose node release does not exist', () => {
+    // node v1.0.1 publishes no x86_64-apple-darwin build.
+    expect(manifest.nodeDarwinX8664Url).toBeUndefined();
+    expect(manifest.minerDarwinX8664Url).toBeUndefined();
+    const intelMac = runBash(
+      `source '${shellScriptPath}'; PLATFORM_KEY=DarwinX8664; NODE_TARGET=x86_64-apple-darwin; MINER_ASSET=quantus-miner-macos-x86_64; OS=macos; ARCH=x86_64; load_compatibility_manifest '${shellManifestPath}'`,
+    );
+    expect(intelMac.status).not.toBe(0);
+    expect(intelMac.stderr).toContain('has no build for macos/x86_64');
+  });
+
+  test('refuses a manifest for any other network', () => {
+    const planck = runBash(
+      `source '${shellScriptPath}'; PLATFORM_KEY=LinuxX8664; NODE_TARGET=x86_64-unknown-linux-gnu; MINER_ASSET=quantus-miner-linux-x86_64; f=$(mktemp); sed 's/"networkId": "mainnet"/"networkId": "planck"/' '${shellManifestPath}' > "$f"; load_compatibility_manifest "$f"`,
+    );
+    expect(planck.status).not.toBe(0);
+    expect(planck.stderr).toContain('restricted to Quantus mainnet');
+  });
+
+  test('setup --force keeps the existing reward identity', () => {
+    const result = spawnSync(bash, ['--noprofile', '--norc', resolve(root, 'scripts/test-quantus-mining.sh').replaceAll('\\', '/')], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    expect(result.stderr).toBe('');
+    expect(result.stdout).toContain('ok: setup --force preserves existing reward identity');
+    expect(result.status).toBe(0);
+  });
+
+  test('docs, skill and agent prompt describe mainnet, not the retired testnet', () => {
+    const prompt = readFileSync(resolve(root, 'static/agent-setup/prompt.md'), 'utf8');
+    for (const content of [guide, skill, prompt]) {
+      expect(content).toMatch(/mainnet/i);
+      expect(content).not.toMatch(/tokens have no monetary value/i);
+    }
+    expect(guide).toContain('## Coming from Planck');
+    expect(guide).toContain('--force-authoring');
+    expect(script).not.toContain('CHAIN:-planck');
+    expect(ps1).not.toMatch(/'CHAIN', 'planck'/);
+  });
 });

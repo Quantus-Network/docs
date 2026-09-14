@@ -5,7 +5,7 @@ title: Start Mining
 
 # Start Mining
 
-This guide connects a computer to the **Planck testnet** and starts the supported Quantus node and miner pair. Planck tokens have no monetary value and the network may reset.
+This guide connects a computer to **Quantus mainnet** and starts the supported node and miner pair. Mainnet QTC has value, so treat your recovery phrase like the keys to a bank account.
 
 ## Set up with an agent
 
@@ -19,9 +19,9 @@ The agent handles setup and checks. Enter wallet recovery words only in your pri
 
 ## Before you start
 
-Have **100 GB free on the node data drive**, as specified by the [pinned node guide](https://github.com/Quantus-Network/chain/blob/v0.10.0/MINING.md#system-requirements). Windows setup checks this before downloads or wallet entry. `preflight` checks Windows platform and storage without starting anything. To use another drive, set `QUANTUS_NODE_DATA_PATH` to your chosen data folder in the same shell before setup and future starts.
+Have **100 GB free on the node data drive**, as specified by the [pinned node guide](https://github.com/Quantus-Network/chain/blob/v1.0.1/MINING.md#system-requirements). Windows setup checks this before downloads or wallet entry. `preflight` checks Windows platform and storage without starting anything. To use another drive, set `QUANTUS_NODE_DATA_PATH` to your chosen data folder in the same shell before setup and future starts.
 
-You need a Quantus wallet with its 24-word recovery phrase. Keep that phrase offline. Never paste it into chat, email, a support ticket, or a command.
+You need a Quantus wallet with its 24-word recovery phrase. If you do not have one, install the Quantus Wallet app from [Tools and Community](/reference/tools-and-community) and create a wallet there: mining rewards to that phrase then appear in the app and are spendable directly. Write the phrase on paper and keep it offline. Never paste it into chat, email, a support ticket, or a command.
 
 There are two verified installers, one per shell, and they behave identically: `quantus-mining.sh` for macOS, Linux x64, and WSL2, and `quantus-mining.ps1` for native Windows 10/11 x64. Both read the same [compatibility manifest](/mining-compatibility.json), verify the same checksums, ask for the recovery phrase the same way, and print the same status. On Windows, use PowerShell rather than WSL2: the miner needs the native graphics driver to use the GPU. The [desktop Miner App](/guides/miner-app) remains a preview and is not the verified path.
 
@@ -55,13 +55,13 @@ Unblock-File quantus-mining.ps1
 powershell -ExecutionPolicy Bypass -File .\quantus-mining.ps1 mine
 ```
 
-The installer selects the published pair from the [compatibility manifest](/mining-compatibility.json): node `v0.10.0`, miner `v4.0.2`, and protocol `quantus-miner/2`. It verifies every release asset before installation. There are no version or network choices.
+The installer selects the published pair from the [compatibility manifest](/mining-compatibility.json): node `v1.0.1`, miner `v4.2.0`, and protocol `quantus-miner/2`. It verifies every release asset before installation. There are no version or network choices.
 
 ### 3. Enter your recovery phrase locally
 
 The prompt is hidden. The phrase is used locally to derive your wormhole reward address, then discarded. It is not saved, logged, sent over the network, or placed in command history.
 
-The installer names the node, detects a conservative CPU or GPU configuration, starts both processes, and prints status. Initial chain sync downloads and executes every block, which is the only sync mode this network supports, and takes one to a few hours depending on the connection. It does not count as hands-on setup time, and the miner starts working the moment the node reports it is synced.
+The installer names the node, detects a conservative CPU or GPU configuration, starts both processes, and prints status. Initial chain sync downloads and executes every block, which is the only sync mode the node supports. Mainnet is young, so today that is minutes rather than hours, and it grows with the chain. The miner starts working the moment the node reports it is synced.
 
 ## Know when it works
 
@@ -77,8 +77,8 @@ A complete success state shows:
 
 | Field | Ready value |
 | --- | --- |
-| Network | `Planck testnet` |
-| Compatibility | node `v0.10.0` + miner `v4.0.2` |
+| Network | `mainnet` |
+| Compatibility | node `v1.0.1` + miner `v4.2.0` |
 | Node | `Running` |
 | Sync | `Synced` |
 | Miner | `Running` |
@@ -99,8 +99,16 @@ Confirm stop-start recovery once:
 | Start or resume | `./quantus-mining.sh mine` |
 | Check readiness | `./quantus-mining.sh status` |
 | Stop | `./quantus-mining.sh stop` |
-| Reinstall the supported pair | `./quantus-mining.sh setup --force` |
+| Update to the supported pair, keeping your reward address | `./quantus-mining.sh setup --force` |
 | Change resource use | `./quantus-mining.sh config set CPU_WORKERS 4` |
+
+## Coming from Planck
+
+Planck was the public testnet and is retired. Mainnet does not share its history, database, or balances.
+
+- Run `./quantus-mining.sh setup --force` (or `.\quantus-mining.ps1 setup -Force`). It installs the mainnet pair and keeps your existing reward preimage, address, node name, and resource settings. It does not ask for the recovery phrase again.
+- The node syncs mainnet from genesis into `chains/mainnet/`. Planck data under `chains/planck/` is never reused and can be deleted.
+- Never pass `--force-authoring` to join mainnet. That flag only bootstraps a brand-new network.
 
 ## Security boundary
 
@@ -114,19 +122,19 @@ Confirm stop-start recovery once:
 
 ## Compatibility policy
 
-The machine-readable [compatibility manifest](/mining-compatibility.json) is the release source of truth. The current pair is grounded in the `v4.0.0` miner release note, which requires node `v0.10.0+`. The installer does not resolve independent `latest` releases.
+The machine-readable [compatibility manifest](/mining-compatibility.json) is the release source of truth. The current pair is node `v1.0.1`, the first release carrying the mainnet chain spec, with miner `v4.2.0`. Both were verified together on real hardware against mainnet: the node joins with peers and writes its miner auth files, and the miner authenticates and receives work. The installer does not resolve independent `latest` releases. Node `v1.0.1` publishes no Intel macOS build, so Intel Macs are refused rather than paired with a missing node.
 
-The manifest currently publishes minimum OS versions as `not-published`. That is an owner fact still needed from the release team. It does not claim a launch date, mainnet support, or rewards with monetary value.
+The manifest currently publishes minimum OS versions as `not-published`. That is an owner fact still needed from the release team. The manifest does not promise earnings: whether a machine wins blocks depends on its share of total network hash rate.
 
 ## Fix one problem at a time
 
 | Problem | One recovery action |
 | --- | --- |
 | Checksum failed | Delete the named download and run the verified installer again. |
-| Unsupported platform | Use macOS, Linux x64, or 64-bit Windows 10/11. Windows on ARM has no published binaries. |
+| Unsupported platform | Use Apple Silicon macOS, Linux x64, or 64-bit Windows 10/11. Intel macOS and Windows on ARM have no published node for the current pair. |
 | PowerShell refuses to run the script | Run `Unblock-File .\quantus-mining.ps1`, or start it with `powershell -ExecutionPolicy Bypass -File .\quantus-mining.ps1 mine`. |
 | Windows: sync shows peers but the block number is not moving | Check free disk space, peer connectivity and disk activity, then compare block progress with `status`. Do not disable antivirus protection or add exclusions as a default fix. |
-| Installed pair is stale | Run `./quantus-mining.sh setup --force`. |
+| Installed pair is stale, or still on Planck | Run `./quantus-mining.sh setup --force`. Your reward address is kept. |
 | Node or miner stopped | Run `./quantus-mining.sh mine`. |
 | Sync still says `Syncing` | Leave the process running and check `status` later. |
 | macOS blocks a binary | Run `xattr -d com.apple.quarantine ~/quantus-mining/bin/quantus-node ~/quantus-mining/bin/quantus-miner`. |

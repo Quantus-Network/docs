@@ -29,7 +29,7 @@ describe('one-line mining agent setup', () => {
     expect(prompt).toContain('Never pipe');
     expect(prompt).toContain('nonzero hash rate');
     expect(prompt).toContain('restart-check');
-    expect(prompt).toContain('not a mainnet setup');
+    expect(prompt).toContain('Never set up the retired Planck');
     expect(prompt).toContain('Never add antivirus exclusions');
     expect(prompt).not.toContain('\u2014');
     expect(prompt).not.toContain('/releases/latest');
