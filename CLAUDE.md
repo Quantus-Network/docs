@@ -1,19 +1,5 @@
 # Quantus Docs
 
-## Agent setup entry point (2026-09-05)
-
-`static/agent-setup/prompt.md` adds the one-line mining handoff to the existing
-`codex/one-command-mining-9-9` branch / PR #14. The mining guide links it before
-manual prerequisites. It reuses the existing manifest and installers, pauses
-before secret input, and distinguishes syncing from mining. Do not claim the
-endpoint is live until this PR is deployed. No wallet input or mining runtime
-was exercised by this documentation change.
-
-Validation: TypeScript, all 23 tests via `bun test`, and the production build
-passed. The five-process PowerShell test now has an explicit 20-second timeout;
-assertions are unchanged. The build emits existing Browserslist age and UMD
-dependency warnings. The new production URL still returns 404 before deployment.
-
 Technical documentation site for Quantus Network. Built with Docusaurus, deployed to docs.quantus.com.
 
 ## Build
@@ -50,7 +36,7 @@ src/
 - Use tables and bullet points over prose paragraphs
 - Mermaid diagrams where they clarify architecture
 - Source claims from the codebase, DeepWiki exports, or quantusContext.md -- do not hallucinate
-- Mining guide follows chain `MINING.md` as source of truth (https://github.com/Quantus-Network/chain/blob/main/MINING.md)
+- Mining guide targets Quantus mainnet (`--chain mainnet`, data under `chains/mainnet/`). Chain `MINING.md` may still mention Planck; do not revert public docs to the testnet.
 - Do NOT publish internal AI audit findings (quantus-audit/ is internal only)
 - Theme tokens follow the main website design system (void `#0e0e0e`, flare `#ff6b35`, content `#e8e6e0`, Geist + Geist Mono); dark mode only
 
