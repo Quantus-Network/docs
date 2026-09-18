@@ -106,8 +106,6 @@ Websites, documentation, and research.
 | Repository | Language | Description |
 |------------|----------|-------------|
 | [website](https://github.com/Quantus-Network/website) · [DeepWiki](https://deepwiki.com/Quantus-Network/website) | MDX | quantus.com main website. |
-| [whitepaper](https://github.com/Quantus-Network/whitepaper) · [DeepWiki](https://deepwiki.com/Quantus-Network/whitepaper) | -- | White paper versioning. |
-| [qsafe.af](https://github.com/Quantus-Network/qsafe.af) · [DeepWiki](https://deepwiki.com/Quantus-Network/qsafe.af) | TypeScript | qsafe.af -- quantum safety awareness site. |
 | [report-card](https://github.com/Quantus-Network/report-card) · [DeepWiki](https://deepwiki.com/Quantus-Network/report-card) | Astro | Quantum Security Report Card -- rates other chains' quantum readiness. |
 | [privacy-score](https://github.com/Quantus-Network/privacy-score) · [DeepWiki](https://deepwiki.com/Quantus-Network/privacy-score) | TypeScript | Privacy scoring tool for blockchain protocols. |
 
