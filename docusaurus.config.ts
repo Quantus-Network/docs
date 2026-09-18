@@ -122,7 +122,7 @@ const config: Config = {
           items: [
             { label: 'GitHub', href: 'https://github.com/Quantus-Network' },
             { label: 'Messari Report', href: 'https://messari.io/report/quantus-network-quantum-defense' },
-            { label: 'Whitepaper', href: 'https://github.com/Quantus-Network/whitepaper' },
+            { label: 'Whitepaper', href: 'https://www.quantus.com/whitepaper/' },
           ],
         },
       ],
