@@ -16,6 +16,15 @@ All Quantus Network tools, resources, and community channels in one place.
 | Quantus Wallet | [linktr.ee/quantusnetwork](https://linktr.ee/quantusnetwork) | Mobile wallet for iOS and Android |
 | Subsquid Indexer | [subsquid.quantus.com](https://subsquid.quantus.com/blue/graphql) | GraphQL API for querying blocks, transactions, and miner rewards |
 
+## Community-built Tools
+
+Built by community teams. Not operated by Quantus Network.
+
+| Tool | Link | Description |
+|------|------|-------------|
+| qtcscan.com | [qtcscan.com](https://qtcscan.com) | Community block explorer: accounts and rich list, vesting, supply, mining pools |
+| Qkeep | [qkeep.app](https://qkeep.app) | Community wallet for web and Chrome, with ML-DSA signatures made on the device |
+
 ## Research and Publications
 
 | Resource | Link |
