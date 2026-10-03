@@ -16,6 +16,14 @@ All Quantus Network tools, resources, and community channels in one place.
 | Quantus Wallet | [linktr.ee/quantusnetwork](https://linktr.ee/quantusnetwork) | Mobile wallet for iOS and Android |
 | Subsquid Indexer | [subsquid.quantus.com](https://subsquid.quantus.com/blue/graphql) | GraphQL API for querying blocks, transactions, and miner rewards |
 
+## Community-built Tools
+
+The following tools are maintained independently of Quantus Network.
+
+| Tool | Link | Description |
+|------|------|-------------|
+| IOTA Watch | [iotahome.site](https://iotahome.site/en/projects/quantus) | Read-only mainnet rewards dashboard using public miner identifiers and the `sqm.quantus.com` indexer; displays indexed rewards and recent blocks, without wallet connection or private keys. [MIT source](https://github.com/molimao/iota). |
+
 ## Research and Publications
 
 | Resource | Link |
