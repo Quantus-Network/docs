@@ -29,6 +29,7 @@ All Quantus Network tools, resources, and community channels in one place.
 
 | Channel | Link |
 |---------|------|
+| Discord | [discord.quantus.com](https://discord.quantus.com) |
 | X (Twitter) | [@QuantusNetwork](https://x.com/QuantusNetwork) |
 | Telegram | [t.me/quantusnetwork](https://t.me/quantusnetwork) |
 | YouTube | [youtube.com/@quantusnetwork](https://youtube.com/@quantusnetwork) |

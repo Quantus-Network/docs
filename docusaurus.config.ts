@@ -113,6 +113,7 @@ const config: Config = {
         {
           title: 'Community',
           items: [
+            { label: 'Discord', href: 'https://discord.quantus.com' },
             { label: 'Telegram', href: 'https://t.me/quantusnetwork' },
             { label: 'X / Twitter', href: 'https://x.com/QuantusNetwork' },
           ],
