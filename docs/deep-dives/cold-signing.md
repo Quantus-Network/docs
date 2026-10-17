@@ -104,4 +104,4 @@ Failed **inclusion** (wrong nonce, not enough balance for fees) still consumes n
 | Mobile / cold-wallet / Keystone UR parsers | Shared `ur:quantus-sign-request` wire format |
 | Signature scheme | ML-DSA-87 or ML-DSA-65; scheme is inferred from response length |
 
-For protocol-level delays, guardians, and check-phrases that complement an air gap, see [User Safety](./safety).
+For protocol-level delays, guardians, and check-phrases that complement an air gap, see [User Safety](./safety.md).
