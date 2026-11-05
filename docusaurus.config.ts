@@ -91,7 +91,7 @@ const config: Config = {
           label: 'Documentation',
         },
         {
-          href: 'https://quantus.com',
+          href: 'https://www.quantus.com/',
           label: 'Website',
           position: 'right',
         },
