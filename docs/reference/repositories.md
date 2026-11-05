@@ -5,7 +5,7 @@ title: Repository Map
 
 # Repository Map
 
-All Quantus Network source code lives in the [Quantus-Network](https://github.com/Quantus-Network) GitHub organization. This page catalogs every repository, organized by function.
+All Quantus source code lives in the [Quantus-Network](https://github.com/Quantus-Network) GitHub organization. This page catalogs every repository, organized by function.
 
 Each repo links to GitHub and [DeepWiki](https://deepwiki.com) (AI-generated documentation for deeper code exploration).
 
@@ -46,7 +46,7 @@ User-facing software for interacting with the network.
 
 | Repository | Language | Description |
 |------------|----------|-------------|
-| [quantus-cli](https://github.com/Quantus-Network/quantus-cli) · [DeepWiki](https://deepwiki.com/Quantus-Network/quantus-cli) | Rust | Command-line client for Quantus Network. |
+| [quantus-cli](https://github.com/Quantus-Network/quantus-cli) · [DeepWiki](https://deepwiki.com/Quantus-Network/quantus-cli) | Rust | Command-line client for Quantus. |
 | [quantus-apps](https://github.com/Quantus-Network/quantus-apps) · [DeepWiki](https://deepwiki.com/Quantus-Network/quantus-apps) | Dart | Mobile and desktop wallet plus the desktop mining GUI (Flutter). |
 | [quantus-miner](https://github.com/Quantus-Network/quantus-miner) · [Latest Release](https://github.com/Quantus-Network/quantus-miner/releases/latest) · [DeepWiki](https://deepwiki.com/Quantus-Network/quantus-miner) | Rust | External mining software (CPU/GPU). |
 | [quantus_ur](https://github.com/Quantus-Network/quantus_ur) · [DeepWiki](https://deepwiki.com/Quantus-Network/quantus_ur) | Rust | UR QR code implementation for hardware wallet communication. |

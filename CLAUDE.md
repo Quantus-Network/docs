@@ -1,6 +1,6 @@
 # Quantus Docs
 
-Technical documentation site for Quantus Network. Built with Docusaurus, deployed to docs.quantus.com.
+Technical documentation site for Quantus. Built with Docusaurus, deployed to docs.quantus.com.
 
 ## Build
 

@@ -18,7 +18,7 @@ These docs follow a layered depth model: start broad, go deep where it matters t
 |-------|---------|------|-------------------|
 | 1 | **[Architecture Overview](./architecture)** | ~10 min | How the system works end-to-end |
 | 2 | **[Deep Dives](./deep-dives/pqc)** | ~30 min each | Technical detail on each major subsystem |
-| 3 | **[Guides](./guides/mining)** | ~15 min each | Practical tutorials for mining and running a node |
+| 3 | **[Guides](./guides/mining/)** | ~15 min each | Practical tutorials for mining and running a node |
 | 4 | **[Reference](./reference/repositories)** | Variable | Repository map, tokenomics, audits, and roadmap |
 
 ### Deep Dives
@@ -32,7 +32,7 @@ These docs follow a layered depth model: start broad, go deep where it matters t
 
 ### Guides
 
-- [Mining and Running a Node](./guides/mining): Set up a node, start mining, or run a non-mining full node
+- [Mining and Running a Node](./guides/mining/): Set up a node, start mining, or run a non-mining full node
 
 ## Quick Links
 

@@ -8,7 +8,7 @@ user_invocable: true
 
 Interactive mining setup for Quantus mainnet on macOS or Linux (including WSL2 on Windows). Handles node identity, wormhole address generation, node launch, and external miner launch. Rewards are spendable directly from the wallet app (no claiming step). Use `--chain mainnet` (not `planck`). Node v1.0.1 or newer is required.
 
-This skill mirrors the public mining guide at https://docs.quantus.com/guides/mining but is optimized for an AI agent walking a user through setup step by step.
+This skill mirrors the public mining guide at https://docs.quantus.com/guides/mining/ but is optimized for an AI agent walking a user through setup step by step.
 
 ## Source of Truth
 

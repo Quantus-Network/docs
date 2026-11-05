@@ -19,7 +19,7 @@ Quantus has a single native asset (QTC) and no smart contracts. To interact with
 
 ```mermaid
 graph LR
-    subgraph Quantus["Quantus Network"]
+    subgraph Quantus["Quantus"]
         Wallet["Quantus Wallet<br/>Swap Button"]
         Node["Quantus Node"]
     end

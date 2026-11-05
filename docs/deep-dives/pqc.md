@@ -90,7 +90,7 @@ m / 44' / 189189' / account' / 0' / 0'
 | Component | Value | Meaning |
 |-----------|-------|---------|
 | Purpose | 44' | BIP-44 standard |
-| Coin Type | 189189' | Quantus Network identifier |
+| Coin Type | 189189' | Quantus identifier |
 | Account | index' | Account index (configurable) |
 | Change | 0' | External chain |
 | Address | 0' | First address |
