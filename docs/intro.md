@@ -38,8 +38,8 @@ These docs follow a layered depth model: start broad, go deep where it matters t
 
 - [Tools and Community](./reference/tools-and-community): Explorer, telemetry, wallet, socials, and all external links
 - [GitHub Organization](https://github.com/Quantus-Network): All repositories
-- [Whitepaper](https://quantus.com/whitepaper)
+- [Whitepaper](https://www.quantus.com/whitepaper/)
 - [Research Forum](https://research.quantus.com)
 - [Messari Research Report](https://messari.io/report/quantus-network-quantum-defense)
 - [Blog](https://www.quantus.com/blog/)
-- [quantus.com](https://quantus.com)
+- [quantus.com](https://www.quantus.com/)

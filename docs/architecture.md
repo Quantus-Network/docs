@@ -102,7 +102,7 @@ Traditional PQC adoption faces a fundamental scaling crisis:
 - Bitcoin ECDSA signature: **~65 bytes**
 - ML-DSA-87 (Dilithium) signature: **~4,627 bytes** (70x larger)
 
-If Bitcoin simply swapped to PQC signatures with no block-size change, the [whitepaper](https://quantus.com/whitepaper) puts its quantum-secure throughput (QTPS) at about 1.1, down from ~10 TPS. Every block would be consumed by signature data.
+If Bitcoin simply swapped to PQC signatures with no block-size change, the [whitepaper](https://www.quantus.com/whitepaper/) puts its quantum-secure throughput (QTPS) at about 1.1, down from ~10 TPS. Every block would be consumed by signature data.
 
 ## Quantus's Solution: Wormhole Addresses
 
@@ -113,7 +113,7 @@ Quantus solves the signature bloat problem with aggregated ZK proofs:
 3. Batches of proofs are **aggregated** into a compact Plonky2 proof
 4. The aggregated proof is posted onchain, verifying all transactions at once
 
-Block space is the bound: **12-second** target block time and **3.75 MB** of transactions per block. Every Quantus transaction is post-quantum, so TPS and QTPS are the same number ([whitepaper](https://quantus.com/whitepaper)):
+Block space is the bound: **12-second** target block time and **3.75 MB** of transactions per block. Every Quantus transaction is post-quantum, so TPS and QTPS are the same number ([whitepaper](https://www.quantus.com/whitepaper/)):
 
 | Mode | Transfers / block | QTPS |
 |------|-------------------|------|

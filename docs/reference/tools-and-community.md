@@ -20,7 +20,7 @@ All Quantus tools, resources, and community channels in one place.
 
 | Resource | Link |
 |----------|------|
-| Whitepaper | [quantus.com/whitepaper](https://quantus.com/whitepaper) |
+| Whitepaper | [quantus.com/whitepaper](https://www.quantus.com/whitepaper/) |
 | Messari Research Report | [messari.io/report/quantus-network-quantum-defense](https://messari.io/report/quantus-network-quantum-defense) |
 | Research Portal | [research.quantus.com](https://research.quantus.com) |
 | Blog | [quantus.com/blog](https://www.quantus.com/blog/) |
@@ -40,5 +40,5 @@ All Quantus tools, resources, and community channels in one place.
 | Resource | Link |
 |----------|------|
 | DeepWiki (per-repo AI docs) | [deepwiki.com/Quantus-Network](https://deepwiki.com/Quantus-Network) |
-| Quantus Website | [quantus.com](https://quantus.com) |
+| Quantus Website | [quantus.com](https://www.quantus.com/) |
 | Linktree | [linktr.ee/quantusnetwork](https://linktr.ee/quantusnetwork) |

@@ -42,7 +42,7 @@ sequenceDiagram
 
 ## Performance Impact
 
-Figures from the [whitepaper](https://quantus.com/whitepaper). Bound: 12-second blocks, 3.75 MB of transactions.
+Figures from the [whitepaper](https://www.quantus.com/whitepaper/). Bound: 12-second blocks, 3.75 MB of transactions.
 
 | Mode | Bytes per transfer | Transfers / block | QTPS |
 |------|--------------------|-------------------|------|
