@@ -19,7 +19,7 @@ bun run serve    # serve production build locally
 docs/
   intro.md                     Landing page (slug: /)
   architecture.md              System architecture overview
-  deep-dives/                  Per-subsystem technical docs (6 pages)
+  deep-dives/                  Per-subsystem technical docs (7 pages)
   guides/                      Mining app (GUI), mining + node setup (CLI)
   reference/                   Repo map, tokenomics, audits, roadmap, tools & community
 src/
