@@ -95,7 +95,7 @@ GPU mining is recommended when available. Mining rewards accumulate at your worm
 
 The script wires miner authentication when the downloaded pair supports it: after the node starts it reads `miner-auth-token` and `miner-tls-cert-sha256` from the node's chain directory and passes them to the miner. You do not need to copy those values by hand. If the pair predates miner auth, the script starts without those flags.
 
-Example config template: [mining.conf.example](/scripts/mining.conf.example).
+Example config template: [mining.conf.example](https://docs.quantus.com/scripts/mining.conf.example).
 
 ## Manual Installation (Mac / Linux)
 
