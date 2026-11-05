@@ -1,6 +1,6 @@
 # quantus-docs
 
-Technical documentation for [Quantus Network](https://quantus.network). Built with [Docusaurus](https://docusaurus.io/).
+Technical documentation for [Quantus](https://quantus.network). Built with [Docusaurus](https://docusaurus.io/).
 
 Serves as investor-grade technical documentation covering architecture, cryptographic stack, consensus, ZK scaling, mining guides, and a full repository map.
 

@@ -59,6 +59,9 @@ const config: Config = {
           editUrl: 'https://github.com/Quantus-Network/docs/tree/main/',
         },
         blog: false,
+        sitemap: {
+          ignorePatterns: ['/search', '/search/', '/search/**'],
+        },
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -106,7 +109,7 @@ const config: Config = {
           title: 'Documentation',
           items: [
             { label: 'Architecture', to: '/architecture' },
-            { label: 'Mining Guide', to: '/guides/mining' },
+            { label: 'Mining Guide', to: '/guides/mining/' },
             { label: 'Repository Map', to: '/reference/repositories' },
           ],
         },

@@ -132,7 +132,7 @@ Quote `CHAIN_DIR` on macOS — `Application Support` contains a space. The token
 
 GPU mining is much faster than the built-in CPU loop. Multiple miners can connect to the same node; the node broadcasts the same job and the first valid result wins.
 
-For the QUIC protocol, see [External Miner Protocol](./miner-protocol.md). Operator setup: [Mining Guide](../guides/mining.md).
+For the QUIC protocol, see [External Miner Protocol](./miner-protocol.md). Operator setup: [Mining Guide](/guides/mining/).
 
 **Source:** [quantus-miner](https://github.com/Quantus-Network/quantus-miner)
 

@@ -5,7 +5,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 import {extractMarkdownFromArticle} from '@site/src/utils/extractMarkdownFromArticle';
 import styles from './styles.module.css';
 
-const MINING_PATH = '/guides/mining';
+const MINING_PATH = '/guides/mining/';
 
 async function copyTextToClipboard(text: string): Promise<void> {
   try {
@@ -29,7 +29,7 @@ export default function DocActionButtons(): ReactNode {
   const skillUrl = useBaseUrl('/skills/mining-skill.md');
 
   const isMiningPage =
-    location.pathname.replace(/\/$/, '') === MINING_PATH;
+    location.pathname.replace(/\/$/, '') === MINING_PATH.replace(/\/$/, '');
 
   useEffect(() => {
     const article = document.querySelector('article');
@@ -65,7 +65,7 @@ export default function DocActionButtons(): ReactNode {
           '',
           '---',
           '',
-          '# Reference: full mining guide (docs.quantus.com/guides/mining)',
+          '# Reference: full mining guide (docs.quantus.com/guides/mining/)',
           '',
           markdown,
         ].join('\n');

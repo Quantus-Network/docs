@@ -5,7 +5,7 @@ title: Tools and Community
 
 # Tools and Community
 
-All Quantus Network tools, resources, and community channels in one place.
+All Quantus tools, resources, and community channels in one place.
 
 ## Tools
 
