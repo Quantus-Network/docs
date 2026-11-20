@@ -16,6 +16,14 @@ All Quantus tools, resources, and community channels in one place.
 | Quantus Wallet | [linktr.ee/quantusnetwork](https://linktr.ee/quantusnetwork) | Mobile wallet for iOS and Android |
 | Subsquid Indexer | [subsquid.quantus.com](https://subsquid.quantus.com/blue/graphql) | GraphQL API for querying blocks, transactions, and miner rewards |
 
+## Community Mining Pools
+
+Independent pools run by the community. They are not operated or endorsed by Quantus; always check a pool's fees and payout history before pointing hashrate at it.
+
+| Pool | Stratum | Fee / Scheme | Stats |
+|------|---------|--------------|-------|
+| VeinPool (France, EU) | `stratum+tcp://qtc.veinpool.fr:3040` (PPLNS) / `:3042` (SOLO), TLS on port + 10000 | 1% PPLNS / SOLO | [veinpool.fr/en/coin/qtc](https://veinpool.fr/en/coin/qtc) · [API](https://veinpool.fr/api/pools/qtc1) |
+
 ## Research and Publications
 
 | Resource | Link |
